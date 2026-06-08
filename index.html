@@ -628,7 +628,7 @@
           const names = await callApi('getNamesByCourse', { courseType });
           fillNameList(names);
           nameInput.disabled = false;
-          nameInput.placeholder = 'พิมพ์ชื่อตัวเอง 3 ตัวอักษรขึ้นไป...';
+          nameInput.placeholder = 'พิมพ์ชื่อ-นามสกุลของคุณ...';
         } catch (e) {
           // ถึงดึงรายชื่อไม่ได้ ก็ยังให้พิมพ์ชื่อเองลงทะเบียนได้
           nameInput.disabled = false;
