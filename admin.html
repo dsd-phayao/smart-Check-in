@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <title>DSD Phayao — ตั้งจุดฝึก (แอดมิน)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --navy:#0a2d6e; --blue:#1a56c4; --bluelt:#3b82f6;
+      --green:#16a34a; --gold:#d4a017; --white:#fff;
+      --ink:#0f172a; --mid:#475569; --border:#e2e8f0; --radius:10px;
+    }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    html,body { font-family:'Sarabun',sans-serif; background:#f1f5f9; min-height:100vh; }
+    .wrap { max-width:480px; margin:0 auto; min-height:100vh; background:#fff; }
+
+    .head {
+      background:linear-gradient(145deg,var(--navy),var(--blue));
+      padding:28px 24px; text-align:center; position:relative; overflow:hidden;
+    }
+    .head::before { content:''; position:absolute; width:180px; height:180px; border-radius:50%;
+      background:rgba(255,255,255,.05); top:-50px; right:-40px; }
+    .head h1 { color:#fff; font-size:1.4rem; font-weight:800; position:relative; z-index:1; }
+    .head p { color:rgba(255,255,255,.75); font-size:.8rem; margin-top:4px; position:relative; z-index:1; }
+    .badge { display:inline-block; margin-top:8px; padding:3px 12px; background:var(--gold);
+      color:#fff; border-radius:20px; font-size:.72rem; font-weight:700; position:relative; z-index:1; }
+
+    .body { padding:24px 18px 36px; }
+    .field { margin-bottom:16px; }
+    .label { font-size:.9rem; font-weight:700; color:var(--ink); margin-bottom:6px; display:block; }
+
+    select, input {
+      width:100%; padding:12px 14px; font-size:.95rem; font-family:'Sarabun',sans-serif;
+      border:1.5px solid var(--border); border-radius:var(--radius); background:#fff; color:var(--ink);
+      outline:none; appearance:none; -webkit-appearance:none;
+    }
+    select:focus, input:focus { border-color:var(--bluelt); box-shadow:0 0 0 3px rgba(59,130,246,.1); }
+
+    .card {
+      border:1.5px solid var(--border); border-radius:var(--radius);
+      background:#f8fafc; padding:14px; margin-bottom:8px;
+    }
+    .row { display:flex; justify-content:space-between; font-size:.85rem; padding:4px 0; }
+    .row-label { color:var(--mid); font-weight:500; }
+    .row-value { color:var(--ink); font-weight:600; text-align:right; word-break:break-all; max-width:60%; }
+    .row-value.empty { color:#94a3b8; font-weight:400; }
+
+    .btn-gps {
+      width:100%; padding:13px; font-size:.95rem; font-family:'Sarabun',sans-serif; font-weight:700;
+      color:#fff; background:linear-gradient(135deg,var(--blue),var(--bluelt)); border:none;
+      border-radius:var(--radius); cursor:pointer; margin-bottom:10px;
+      box-shadow:0 4px 12px rgba(26,86,196,.25);
+    }
+    .btn-gps:active { opacity:.85; transform:scale(.98); }
+
+    .btn-save {
+      width:100%; padding:14px; font-size:1rem; font-family:'Sarabun',sans-serif; font-weight:800;
+      color:#fff; background:linear-gradient(135deg,var(--green),#22c55e); border:none;
+      border-radius:var(--radius); cursor:pointer; box-shadow:0 4px 14px rgba(22,163,74,.28);
+    }
+    .btn-save:active { opacity:.85; transform:scale(.98); }
+
+    .divider { height:1px; background:var(--border); margin:18px 0; }
+    .hint { font-size:.8rem; color:var(--mid); background:#eff6ff; border:1px solid #bfdbfe;
+      border-radius:8px; padding:10px 12px; margin-bottom:16px; line-height:1.5; }
+    .swal2-popup { font-family:'Sarabun',sans-serif !important; border-radius:18px !important; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="head">
+      <h1>ตั้งจุดฝึกอบรม</h1>
+      <p>DSD Phayao Smart Check-in</p>
+      <span class="badge">สำหรับเจ้าหน้าที่</span>
+    </div>
+
+    <div class="body">
+      <div class="hint">
+        วิธีใช้: ไปยืน ณ จุดฝึกจริง → เลือกหลักสูตร → กดจับพิกัด → ตั้งรัศมี → กดบันทึก
+        ระบบจะใช้พิกัดนี้ตรวจสอบผู้เข้าอบรมของหลักสูตรนั้น
+      </div>
+
+      <div class="field">
+        <label class="label">เลือกหลักสูตร</label>
+        <select id="courseSel">
+          <option value="" selected disabled>-- กำลังโหลด... --</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label class="label">รัศมีที่อนุญาต (เมตร)</label>
+        <input type="number" id="radiusInput" value="93" min="10" max="2000">
+      </div>
+
+      <div class="divider"></div>
+
+      <button type="button" class="btn-gps" onclick="grabLocation()">📍 จับพิกัดตำแหน่งปัจจุบัน</button>
+      <div class="card">
+        <div class="row">
+          <span class="row-label">พิกัดที่จับได้</span>
+          <span class="row-value empty" id="gotLoc">ยังไม่ได้จับพิกัด</span>
+        </div>
+        <div class="row">
+          <span class="row-label">พิกัดเดิมของหลักสูตร</span>
+          <span class="row-value empty" id="curLoc">เลือกหลักสูตรก่อน</span>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <button type="button" class="btn-save" onclick="saveLocation()">💾 บันทึกจุดฝึก</button>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = 'https://script.google.com/macros/s/AKfycbxISLPK-LQ78R6iIHMMUO55XwHae6Va_ChzlODUOoMHd69HOE22KGyZEunw_Ivy6lJ2qQ/exec';
+
+    let gotLat = '', gotLng = '';
+
+    async function callApi(action, payload) {
+      const res = await fetch(API_URL, {
+        method:'POST',
+        headers:{ 'Content-Type':'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action, ...payload })
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || 'เกิดข้อผิดพลาด');
+      return data.result;
+    }
+
+    // โหลดรายชื่อหลักสูตร
+    async function loadCourses() {
+      const sel = document.getElementById('courseSel');
+      try {
+        const courses = await callApi('getCourses', {});
+        sel.innerHTML = '<option value="" selected disabled>-- เลือกหลักสูตร --</option>';
+        (courses || []).forEach(c => {
+          const o = document.createElement('option');
+          o.value = c; o.textContent = c; sel.appendChild(o);
+        });
+      } catch (e) {
+        sel.innerHTML = '<option value="" selected disabled>-- โหลดไม่สำเร็จ --</option>';
+      }
+    }
+    loadCourses();
+
+    // เมื่อเลือกหลักสูตร → แสดงพิกัดเดิม (ถ้ามี)
+    document.getElementById('courseSel').addEventListener('change', async function () {
+      const course = this.value;
+      const curEl = document.getElementById('curLoc');
+      curEl.textContent = 'กำลังโหลด...';
+      curEl.classList.remove('empty');
+      try {
+        const loc = await callApi('getCourseLocation', { course });
+        if (loc.isDefault) {
+          curEl.textContent = 'ยังไม่ได้ตั้ง (ใช้ค่าเริ่มต้น)';
+          curEl.classList.add('empty');
+        } else {
+          curEl.textContent = loc.lat.toFixed(6) + ', ' + loc.lng.toFixed(6) + ' (รัศมี ' + loc.radius + 'ม.)';
+          document.getElementById('radiusInput').value = loc.radius;
+        }
+      } catch (e) {
+        curEl.textContent = 'โหลดไม่สำเร็จ';
+      }
+    });
+
+    // จับพิกัดปัจจุบัน
+    function grabLocation() {
+      if (!navigator.geolocation) {
+        Swal.fire('ไม่รองรับ GPS', 'กรุณาใช้เบราว์เซอร์ที่รองรับ', 'error');
+        return;
+      }
+      Swal.fire({ title:'📡 กำลังจับพิกัด', html:'กรุณาอนุญาตการเข้าถึงตำแหน่ง',
+        allowOutsideClick:false, didOpen:()=>{
+        Swal.showLoading();
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            gotLat = pos.coords.latitude.toFixed(8);
+            gotLng = pos.coords.longitude.toFixed(8);
+            const el = document.getElementById('gotLoc');
+            el.textContent = gotLat + ', ' + gotLng;
+            el.classList.remove('empty');
+            Swal.close();
+            Swal.fire({ icon:'success', title:'จับพิกัดสำเร็จ', timer:1500, showConfirmButton:false });
+          },
+          (err) => {
+            Swal.close();
+            Swal.fire('จับพิกัดไม่สำเร็จ', 'กรุณาออกที่โล่งแล้วลองใหม่', 'error');
+          },
+          { enableHighAccuracy:true, timeout:15000, maximumAge:0 }
+        );
+      }});
+    }
+
+    // บันทึกจุดฝึก
+    async function saveLocation() {
+      const course = document.getElementById('courseSel').value;
+      const radius = parseInt(document.getElementById('radiusInput').value) || 93;
+
+      if (!course) { Swal.fire('กรุณาเลือกหลักสูตร', '', 'warning'); return; }
+      if (!gotLat || !gotLng) { Swal.fire('ยังไม่ได้จับพิกัด', 'กรุณากดจับพิกัดก่อน', 'warning'); return; }
+
+      Swal.fire({ title:'⏳ กำลังบันทึก...', allowOutsideClick:false, didOpen:()=>Swal.showLoading() });
+      try {
+        await callApi('saveCourseLocation', {
+          course, lat: parseFloat(gotLat), lng: parseFloat(gotLng), radius
+        });
+        Swal.fire('บันทึกสำเร็จ ✅', 'ตั้งจุดฝึกของ "' + course + '" เรียบร้อย', 'success');
+      } catch (e) {
+        Swal.fire('บันทึกไม่สำเร็จ', e.message, 'error');
+      }
+    }
+  </script>
+</body>
+</html>
