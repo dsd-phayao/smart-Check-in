@@ -62,6 +62,13 @@
     }
     .btn-save:active { opacity:.85; transform:scale(.98); }
 
+    .btn-open-loc {
+      width:100%; padding:13px; font-size:.95rem; font-family:'Sarabun',sans-serif; font-weight:700;
+      color:#1a56c4; background:#eff6ff; border:1.5px solid #93c5fd;
+      border-radius:var(--radius); cursor:pointer;
+    }
+    .btn-open-loc:active { opacity:.85; transform:scale(.98); }
+
     .divider { height:1px; background:var(--border); margin:18px 0; }
     .hint { font-size:.8rem; color:var(--mid); background:#eff6ff; border:1px solid #bfdbfe;
       border-radius:8px; padding:10px 12px; margin-bottom:16px; line-height:1.5; }
@@ -77,11 +84,6 @@
     </div>
 
     <div class="body">
-      <div class="hint">
-        วิธีใช้: ไปยืน ณ จุดฝึกจริง → เลือกหลักสูตร → กดจับพิกัด → ตั้งรัศมี → กดบันทึก
-        ระบบจะใช้พิกัดนี้ตรวจสอบผู้เข้าอบรมของหลักสูตรนั้น
-      </div>
-
       <div class="field">
         <label class="label">เลือกหลักสูตร</label>
         <select id="courseSel">
@@ -89,33 +91,74 @@
         </select>
       </div>
 
-      <div class="field">
-        <label class="label">รัศมีที่อนุญาต (เมตร)</label>
-        <input type="number" id="radiusInput" value="93" min="10" max="2000">
+      <!-- ปุ่มเปิดกล่องตั้งจุดฝึก -->
+      <button type="button" class="btn-open-loc" onclick="toggleLocBox(true)">📍 ตั้งจุดฝึกอบรม</button>
+
+      <!-- กล่องตั้งจุดฝึก (ซ่อนไว้ตอนแรก เด้งเมื่อกด) -->
+      <div id="locBox" style="display:none;margin-top:12px;padding:16px;border:1.5px solid #bfdbfe;border-radius:10px;background:#eff6ff">
+        <div style="font-weight:700;color:#1a56c4;margin-bottom:10px">ตั้งจุดฝึกอบรม</div>
+        <div class="hint" style="margin-bottom:12px">
+          วิธีใช้: ไปยืน ณ จุดฝึกจริง → กดจับพิกัด → ตั้งรัศมี → กดบันทึก
+        </div>
+
+        <div class="field">
+          <label class="label">รัศมีที่อนุญาต (เมตร)</label>
+          <input type="number" id="radiusInput" value="93" min="10" max="2000">
+        </div>
+
+        <button type="button" class="btn-gps" onclick="grabLocation()">📍 จับพิกัดตำแหน่งปัจจุบัน</button>
+        <div class="card">
+          <div class="row">
+            <span class="row-label">พิกัดที่จับได้</span>
+            <span class="row-value empty" id="gotLoc">ยังไม่ได้จับพิกัด</span>
+          </div>
+          <div class="row">
+            <span class="row-label">พิกัดเดิมของหลักสูตร</span>
+            <span class="row-value empty" id="curLoc">เลือกหลักสูตรก่อน</span>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button type="button" class="btn-save" style="flex:1" onclick="saveLocation()">💾 บันทึกจุดฝึก</button>
+          <button type="button" style="flex:0 0 90px;padding:14px;background:#e2e8f0;color:#475569;border:none;border-radius:10px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer" onclick="toggleLocBox(false)">ปิด</button>
+        </div>
       </div>
 
       <div class="divider"></div>
 
-      <button type="button" class="btn-gps" onclick="grabLocation()">📍 จับพิกัดตำแหน่งปัจจุบัน</button>
-      <div class="card">
-        <div class="row">
-          <span class="row-label">พิกัดที่จับได้</span>
-          <span class="row-value empty" id="gotLoc">ยังไม่ได้จับพิกัด</span>
+      <!-- ส่วนตรวจสอบเรียลไทม์ -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <span style="font-weight:700;color:#0f172a;font-size:1rem">ตรวจสอบการเช็กชื่อวันนี้</span>
+        <button type="button" onclick="loadAttendance()" style="padding:7px 14px;background:#1a56c4;color:#fff;border:none;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer">🔄 รีเฟรช</button>
+      </div>
+
+      <!-- การ์ดสรุปจำนวน -->
+      <div id="summaryCards" style="display:flex;gap:8px;margin-bottom:12px">
+        <div style="flex:1;text-align:center;padding:12px 6px;background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px">
+          <div id="cntEnter" style="font-size:1.6rem;font-weight:800;color:#16a34a">-</div>
+          <div style="font-size:.78rem;color:#475569">เข้าแล้ว</div>
         </div>
-        <div class="row">
-          <span class="row-label">พิกัดเดิมของหลักสูตร</span>
-          <span class="row-value empty" id="curLoc">เลือกหลักสูตรก่อน</span>
+        <div style="flex:1;text-align:center;padding:12px 6px;background:#eff6ff;border:1.5px solid #93c5fd;border-radius:10px">
+          <div id="cntExit" style="font-size:1.6rem;font-weight:800;color:#1a56c4">-</div>
+          <div style="font-size:.78rem;color:#475569">ออกแล้ว</div>
+        </div>
+        <div style="flex:1;text-align:center;padding:12px 6px;background:#fff7ed;border:1.5px solid #fdba74;border-radius:10px">
+          <div id="cntTotal" style="font-size:1.6rem;font-weight:800;color:#b45309">-</div>
+          <div style="font-size:.78rem;color:#475569">รวมคน</div>
         </div>
       </div>
 
-      <div class="divider"></div>
-
-      <button type="button" class="btn-save" onclick="saveLocation()">💾 บันทึกจุดฝึก</button>
+      <!-- ตารางรายชื่อ -->
+      <div id="attendBox" style="border:1.5px solid #e2e8f0;border-radius:10px;overflow:hidden">
+        <div id="attendList" style="font-size:.85rem">
+          <div style="padding:20px;text-align:center;color:#94a3b8">เลือกหลักสูตรเพื่อดูข้อมูล</div>
+        </div>
+      </div>
     </div>
   </div>
 
   <script>
-    const API_URL = 'https://script.google.com/macros/s/AKfycbzBfoC-ZvdhgJ6aXaasbl9WblaM8gLs3cx22lSbZkE4Dmmeq7fZEu0GM-gX3eqClKVq/exec';
+    const API_URL = 'https://script.google.com/macros/s/AKfycbxISLPK-LQ78R6iIHMMUO55XwHae6Va_ChzlODUOoMHd69HOE22KGyZEunw_Ivy6lJ2qQ/exec';
 
     let gotLat = '', gotLng = '';
 
@@ -164,7 +207,63 @@
       } catch (e) {
         curEl.textContent = 'โหลดไม่สำเร็จ';
       }
+      // โหลดข้อมูลการเช็กชื่อของหลักสูตรนี้ด้วย
+      loadAttendance();
     });
+
+
+    /* ── เปิด/ปิดกล่องตั้งจุดฝึก ── */
+    function toggleLocBox(show) {
+      document.getElementById('locBox').style.display = show ? 'block' : 'none';
+    }
+
+
+    /* ── โหลดข้อมูลการเช็กชื่อวันนี้ มาแสดงตาราง ── */
+    async function loadAttendance() {
+      const course = document.getElementById('courseSel').value;
+      const listEl = document.getElementById('attendList');
+      if (!course) return;
+
+      listEl.innerHTML = '<div style="padding:20px;text-align:center;color:#94a3b8">กำลังโหลด...</div>';
+
+      try {
+        const r = await callApi('getTodayAttendance', { course });
+
+        // อัปเดตการ์ดสรุป
+        document.getElementById('cntEnter').textContent = r.totalEnter;
+        document.getElementById('cntExit').textContent  = r.totalExit;
+        document.getElementById('cntTotal').textContent = r.totalPeople;
+
+        if (!r.list || r.list.length === 0) {
+          listEl.innerHTML = '<div style="padding:20px;text-align:center;color:#94a3b8">ยังไม่มีใครเช็กชื่อวันนี้</div>';
+          return;
+        }
+
+        // หัวตาราง
+        let html = '<div style="display:flex;background:#f1f5f9;font-weight:700;padding:10px 12px;border-bottom:1.5px solid #e2e8f0">'
+          + '<div style="flex:1">ชื่อ</div>'
+          + '<div style="width:70px;text-align:center;color:#16a34a">เข้า</div>'
+          + '<div style="width:70px;text-align:center;color:#1a56c4">ออก</div>'
+          + '</div>';
+
+        // แถวข้อมูล
+        r.list.forEach((p, i) => {
+          const bg = i % 2 === 0 ? '#ffffff' : '#f8fafc';
+          html += '<div style="display:flex;padding:10px 12px;background:' + bg + ';border-bottom:1px solid #f1f5f9">'
+            + '<div style="flex:1">' + escapeHtml(p.name) + '</div>'
+            + '<div style="width:70px;text-align:center;color:' + (p.enter ? '#16a34a' : '#cbd5e1') + '">' + (p.enter || '–') + '</div>'
+            + '<div style="width:70px;text-align:center;color:' + (p.exit ? '#1a56c4' : '#cbd5e1') + '">' + (p.exit || '–') + '</div>'
+            + '</div>';
+        });
+        listEl.innerHTML = html;
+      } catch (e) {
+        listEl.innerHTML = '<div style="padding:20px;text-align:center;color:#dc2626">โหลดไม่สำเร็จ: ' + e.message + '</div>';
+      }
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
 
     // จับพิกัดปัจจุบัน
     function grabLocation() {
