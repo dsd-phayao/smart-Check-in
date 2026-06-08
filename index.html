@@ -493,7 +493,7 @@
     //  ⚠️ ค่าที่ต้องตรวจสอบ / แก้ไขให้เป็นของคุณ
     // ============================================================
     const LIFF_ID = '2010291124-cuelzcch';
-    const API_URL = 'https://script.google.com/macros/s/AKfycbzBfoC-ZvdhgJ6aXaasbl9WblaM8gLs3cx22lSbZkE4Dmmeq7fZEu0GM-gX3eqClKVq/exec';
+    const API_URL = 'https://script.google.com/macros/s/AKfycbxISLPK-LQ78R6iIHMMUO55XwHae6Va_ChzlODUOoMHd69HOE22KGyZEunw_Ivy6lJ2qQ/exec';
 
     // พิกัดจุดฝึก — จะอัปเดตตามหลักสูตรที่เลือก (ค่าเริ่มต้นเผื่อโหลดไม่ทัน)
     let TARGET_LAT = 19.06117421820639;
@@ -628,7 +628,7 @@
           const names = await callApi('getNamesByCourse', { courseType });
           fillNameList(names);
           nameInput.disabled = false;
-          nameInput.placeholder = 'พิมพ์ชื่อ-นามสกุล หรือเลือกจากรายการ...';
+          nameInput.placeholder = 'พิมพ์ชื่อตัวเอง 3 ตัวอักษรขึ้นไป...';
         } catch (e) {
           // ถึงดึงรายชื่อไม่ได้ ก็ยังให้พิมพ์ชื่อเองลงทะเบียนได้
           nameInput.disabled = false;
@@ -654,15 +654,30 @@
     }
 
 
-    /* เติมรายชื่อลงใน datalist */
+    /* เก็บรายชื่อทั้งหมดของหลักสูตรไว้ (ยังไม่แสดง จนกว่าจะพิมพ์ครบ 3 ตัว) */
+    let allNames = [];
+
     function fillNameList(names) {
+      allNames = names || [];
+      // ล้าง datalist ไว้ก่อน ยังไม่แสดงรายชื่อใด ๆ เพื่อความเป็นส่วนตัว
+      document.getElementById('nameList').innerHTML = '';
+    }
+
+    /* กรองรายชื่อตามที่พิมพ์ — แสดงเฉพาะเมื่อพิมพ์ครบ 3 ตัวอักษรขึ้นไป */
+    function filterNameList(keyword) {
       const nameList = document.getElementById('nameList');
       nameList.innerHTML = '';
-      (names || []).forEach(name => {
-        const option = document.createElement('option');
-        option.value = name;
-        nameList.appendChild(option);
-      });
+      const kw = String(keyword || '').trim();
+      // พิมพ์ไม่ถึง 3 ตัว → ไม่แสดงรายชื่อ
+      if (kw.length < 3) return;
+      // แสดงเฉพาะชื่อที่มีคำที่พิมพ์อยู่ในชื่อ
+      allNames
+        .filter(name => String(name).includes(kw))
+        .forEach(name => {
+          const option = document.createElement('option');
+          option.value = name;
+          nameList.appendChild(option);
+        });
     }
 
 
@@ -722,8 +737,9 @@
     // เลือกจาก datalist หรือกด Enter
     nameEl.addEventListener('change', triggerTimeCheck);
 
-    // พิมพ์เอง → หน่วง 0.6 วิ ค่อยตรวจ (กันเรียกถี่เกิน)
+    // พิมพ์เอง → กรองรายชื่อทันที + หน่วง 0.6 วิ ค่อยตรวจสถานะ
     nameEl.addEventListener('input', function () {
+      filterNameList(this.value);   // แสดงรายชื่อเฉพาะเมื่อพิมพ์ครบ 3 ตัว
       clearTimeout(nameCheckTimer);
       nameCheckTimer = setTimeout(triggerTimeCheck, 600);
     });
