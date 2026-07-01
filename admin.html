@@ -13,8 +13,8 @@
       --ink:#0f172a; --mid:#475569; --border:#e2e8f0; --radius:10px;
     }
     * { box-sizing:border-box; margin:0; padding:0; }
-    html,body { font-family:'Sarabun',sans-serif; background:#f1f5f9; min-height:100vh; }
-    .wrap { max-width:520px; margin:0 auto; min-height:100vh; background:#fff; }
+    html, body { width:100%; min-height:100vh; font-family:'Sarabun',sans-serif; background:#ffffff; }
+    .wrap { width:100%; min-height:100vh; background:#fff; display:flex; flex-direction:column; }
 
     .head {
       background:linear-gradient(145deg,var(--navy),var(--blue));
@@ -27,7 +27,7 @@
     .badge { display:inline-block; margin-top:8px; padding:3px 12px; background:var(--gold);
       color:#fff; border-radius:20px; font-size:.72rem; font-weight:700; position:relative; z-index:1; }
 
-    .body { padding:24px 18px 36px; }
+    .body { flex:1; padding:24px 18px 36px; }
     .field { margin-bottom:16px; }
     .label { font-size:.9rem; font-weight:700; color:var(--ink); margin-bottom:6px; display:block; }
 
