@@ -9,378 +9,91 @@
 
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
   <style>
-    /* ========== ตัวแปรสี ========== */
     :root {
-      --blue-dark:   #0a2d6e;
-      --blue-mid:    #1a56c4;
-      --blue-light:  #3b82f6;
-      --green:       #16a34a;
-      --green-light: #22c55e;
-      --white:       #ffffff;
-      --text-dark:   #0f172a;
-      --text-mid:    #475569;
-      --text-light:  #94a3b8;
-      --border:      #e2e8f0;
-      --gold:        #d4a017;
-      --shadow-md:   0 4px 16px rgba(10, 45, 110, .12);
-      --radius-sm:   10px;
+      --blue-dark:#0a2d6e; --blue-mid:#1a56c4; --blue-light:#3b82f6;
+      --green:#16a34a; --green-light:#22c55e; --white:#ffffff;
+      --text-dark:#0f172a; --text-mid:#475569; --text-light:#94a3b8;
+      --border:#e2e8f0; --gold:#d4a017;
+      --shadow-md:0 4px 16px rgba(10,45,110,.12); --radius-sm:10px;
     }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    html, body { width:100%; min-height:100vh; font-family:'Sarabun',sans-serif; background:var(--white); }
+    .app-shell { width:100%; min-height:100vh; background:var(--white); display:flex; flex-direction:column; }
 
-    /* ========== พื้นฐาน ========== */
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+    .app-header { position:relative; overflow:hidden; flex-shrink:0; padding:36px 24px;
+      background:linear-gradient(145deg,var(--blue-dark) 0%,var(--blue-mid) 100%); }
+    .app-header::before { content:''; position:absolute; top:-60px; right:-50px; width:220px; height:220px;
+      border-radius:50%; background:rgba(255,255,255,.05); }
+    .header-logo { position:relative; z-index:1; width:80px; height:80px; margin:0 auto 14px;
+      border-radius:50%; border:3px solid var(--gold); background:var(--white);
+      box-shadow:0 0 0 4px rgba(212,160,23,.2),var(--shadow-md); display:flex; align-items:center; justify-content:center; overflow:hidden; }
+    .header-logo img { width:74px; height:74px; border-radius:50%; object-fit:contain; }
+    .header-title { position:relative; z-index:1; text-align:center; }
+    .header-title h1 { font-size:1.55rem; font-weight:800; line-height:1.2; color:var(--white); }
+    .header-title p { margin-top:4px; font-size:.82rem; color:rgba(255,255,255,.75); }
 
-    html, body {
-      width: 100%;
-      min-height: 100vh;
-      font-family: 'Sarabun', sans-serif;
-      background: var(--white);
-    }
+    .card-body-wrap { position:relative; z-index:2; flex:1; margin-top:-20px; padding:24px 18px 32px;
+      border-radius:24px 24px 0 0; background:var(--white); box-shadow:0 -4px 16px rgba(0,0,0,.06); }
 
-    .app-shell {
-      width: 100%;
-      min-height: 100vh;
-      background: var(--white);
-      display: flex;
-      flex-direction: column;
-    }
+    .field-group { margin-bottom:16px; }
+    .field-label { display:flex; align-items:center; gap:8px; margin-bottom:6px; font-size:.9rem; font-weight:700; color:var(--text-dark); }
+    .field-icon { flex-shrink:0; width:28px; height:28px; border-radius:7px; background:#eff6ff; display:flex; align-items:center; justify-content:center; font-size:.9rem; }
 
-    /* ========== ส่วนหัว (Header) ========== */
-    .app-header {
-      position: relative;
-      overflow: hidden;
-      flex-shrink: 0;
-      padding: 36px 24px;
-      background: linear-gradient(145deg, var(--blue-dark) 0%, var(--blue-mid) 100%);
-    }
+    .app-input, .app-select { width:100%; padding:12px 14px; font-family:'Sarabun',sans-serif; font-size:.95rem;
+      color:var(--text-dark); background:var(--white); border:1.5px solid var(--border); border-radius:var(--radius-sm);
+      outline:none; appearance:none; -webkit-appearance:none; transition:border-color .2s,box-shadow .2s; }
+    .app-input:focus, .app-select:focus { border-color:var(--blue-light); box-shadow:0 0 0 3px rgba(59,130,246,.1); }
+    .app-input:disabled { background:#f8fafc; color:var(--text-dark); }
+    .select-wrap { position:relative; }
+    .select-wrap::after { content:'▾'; position:absolute; top:50%; right:12px; transform:translateY(-50%); color:var(--text-mid); pointer-events:none; }
 
-    .app-header::before {
-      content: '';
-      position: absolute;
-      top: -60px;
-      right: -50px;
-      width: 220px;
-      height: 220px;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, .05);
-    }
+    /* กล่องสถานะ 4 ช่วง */
+    .timetype-box { width:100%; padding:12px 14px; font-family:'Sarabun',sans-serif; font-size:.95rem;
+      color:var(--text-light); background:#f8fafc; border:1.5px solid var(--border); border-radius:var(--radius-sm); transition:all .3s; }
+    .timetype-box.morning   { color:#16a34a; background:#f0fdf4; border-color:#86efac; font-weight:600; }   /* เข้าฝึก - เขียว */
+    .timetype-box.lunch     { color:#d97706; background:#fffbeb; border-color:#fcd34d; font-weight:600; }   /* พักเที่ยง - เหลือง/ส้ม */
+    .timetype-box.afternoon { color:#1a56c4; background:#eff6ff; border-color:#93c5fd; font-weight:600; }   /* เข้าบ่าย - น้ำเงิน */
+    .timetype-box.evening   { color:#7c3aed; background:#f5f3ff; border-color:#c4b5fd; font-weight:600; }   /* เลิกฝึก - ม่วง */
+    .timetype-box.full      { color:#dc2626; background:#fef2f2; border-color:#fca5a5; font-weight:600; }   /* ครบแล้ว - แดง */
 
-    .header-logo {
-      position: relative;
-      z-index: 1;
-      width: 80px;
-      height: 80px;
-      margin: 0 auto 14px;
-      border-radius: 50%;
-      border: 3px solid var(--gold);
-      background: var(--white);
-      box-shadow: 0 0 0 4px rgba(212, 160, 23, .2), var(--shadow-md);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
-    }
+    .locked-msg { display:none; margin-top:6px; padding:6px 10px; font-size:.85rem; color:var(--green);
+      background:#f0fdf4; border:1px solid #86efac; border-radius:8px; }
 
-    .header-logo img {
-      width: 74px;
-      height: 74px;
-      border-radius: 50%;
-      object-fit: contain;
-    }
+    .location-card { overflow:hidden; border:1.5px solid var(--border); border-radius:var(--radius-sm); }
+    .location-card-inner { display:flex; flex-direction:column; gap:8px; padding:12px 14px; background:#f8fafc; }
+    .location-row { display:flex; align-items:center; justify-content:space-between; font-size:.85rem; }
+    .location-row-label { font-weight:500; color:var(--text-mid); }
+    .location-row-value { max-width:60%; font-weight:600; text-align:right; color:var(--text-dark); word-break:break-all; }
+    .location-row-value.empty { font-weight:400; color:var(--text-light); }
 
-    .header-title {
-      position: relative;
-      z-index: 1;
-      text-align: center;
-    }
+    .btn-gps { width:100%; margin-bottom:10px; padding:13px; font-family:'Sarabun',sans-serif; font-size:.95rem; font-weight:700;
+      color:var(--white); background:linear-gradient(135deg,var(--blue-mid),var(--blue-light)); border:none; border-radius:var(--radius-sm);
+      box-shadow:0 4px 12px rgba(26,86,196,.25); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:opacity .2s,transform .1s; }
+    .btn-gps:active { opacity:.85; transform:scale(.98); }
+    .btn-save { width:100%; padding:14px; font-family:'Sarabun',sans-serif; font-size:1rem; font-weight:800;
+      color:var(--white); background:linear-gradient(135deg,var(--green),var(--green-light)); border:none; border-radius:var(--radius-sm);
+      box-shadow:0 4px 14px rgba(22,163,74,.28); cursor:pointer; transition:opacity .2s,transform .1s; }
+    .btn-save:active { opacity:.85; transform:scale(.98); }
+    .btn-save:disabled { opacity:.5; cursor:not-allowed; }
+    .btn-report { width:100%; margin-top:10px; padding:13px; font-family:'Sarabun',sans-serif; font-size:.95rem; font-weight:700;
+      color:#b45309; background:#fff7ed; border:1.5px solid #fdba74; border-radius:var(--radius-sm); cursor:pointer; transition:opacity .2s,transform .1s; }
+    .btn-report:active { opacity:.85; transform:scale(.98); }
 
-    .header-title h1 {
-      font-size: 1.55rem;
-      font-weight: 800;
-      line-height: 1.2;
-      color: var(--white);
-    }
-
-    .header-title p {
-      margin-top: 4px;
-      font-size: .82rem;
-      color: rgba(255, 255, 255, .75);
-    }
-
-    /* ========== กล่องเนื้อหา ========== */
-    .card-body-wrap {
-      position: relative;
-      z-index: 2;
-      flex: 1;
-      margin-top: -20px;
-      padding: 24px 18px 32px;
-      border-radius: 24px 24px 0 0;
-      background: var(--white);
-      box-shadow: 0 -4px 16px rgba(0, 0, 0, .06);
-    }
-
-    /* ========== ช่องกรอกข้อมูล ========== */
-    .field-group {
-      margin-bottom: 16px;
-    }
-
-    .field-label {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 6px;
-      font-size: .9rem;
-      font-weight: 700;
-      color: var(--text-dark);
-    }
-
-    .field-icon {
-      flex-shrink: 0;
-      width: 28px;
-      height: 28px;
-      border-radius: 7px;
-      background: #eff6ff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: .9rem;
-    }
-
-    .app-input,
-    .app-select {
-      width: 100%;
-      padding: 12px 14px;
-      font-family: 'Sarabun', sans-serif;
-      font-size: .95rem;
-      color: var(--text-dark);
-      background: var(--white);
-      border: 1.5px solid var(--border);
-      border-radius: var(--radius-sm);
-      outline: none;
-      appearance: none;
-      -webkit-appearance: none;
-      transition: border-color .2s, box-shadow .2s;
-    }
-
-    .app-input:focus,
-    .app-select:focus {
-      border-color: var(--blue-light);
-      box-shadow: 0 0 0 3px rgba(59, 130, 246, .1);
-    }
-
-    .app-input:disabled {
-      background: #f8fafc;
-      color: var(--text-dark);
-    }
-
-    .select-wrap {
-      position: relative;
-    }
-
-    .select-wrap::after {
-      content: '▾';
-      position: absolute;
-      top: 50%;
-      right: 12px;
-      transform: translateY(-50%);
-      color: var(--text-mid);
-      pointer-events: none;
-    }
-
-    /* ========== กล่องแสดงสถานะ เข้า/ออก ========== */
-    .timetype-box {
-      width: 100%;
-      padding: 12px 14px;
-      font-family: 'Sarabun', sans-serif;
-      font-size: .95rem;
-      color: var(--text-light);
-      background: #f8fafc;
-      border: 1.5px solid var(--border);
-      border-radius: var(--radius-sm);
-      transition: all .3s;
-    }
-
-    .timetype-box.enter {
-      color: var(--green);
-      background: #f0fdf4;
-      border-color: #86efac;
-      font-weight: 600;
-    }
-
-    .timetype-box.exit {
-      color: var(--blue-mid);
-      background: #eff6ff;
-      border-color: #93c5fd;
-      font-weight: 600;
-    }
-
-    .timetype-box.full {
-      color: #dc2626;
-      background: #fef2f2;
-      border-color: #fca5a5;
-      font-weight: 600;
-    }
-
-    /* ========== ข้อความล็อกบัญชี ========== */
-    .locked-msg {
-      display: none;
-      margin-top: 6px;
-      padding: 6px 10px;
-      font-size: .85rem;
-      color: var(--green);
-      background: #f0fdf4;
-      border: 1px solid #86efac;
-      border-radius: 8px;
-    }
-
-    /* ========== กล่องตำแหน่ง GPS ========== */
-    .location-card {
-      overflow: hidden;
-      border: 1.5px solid var(--border);
-      border-radius: var(--radius-sm);
-    }
-
-    .location-card-inner {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      padding: 12px 14px;
-      background: #f8fafc;
-    }
-
-    .location-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      font-size: .85rem;
-    }
-
-    .location-row-label {
-      font-weight: 500;
-      color: var(--text-mid);
-    }
-
-    .location-row-value {
-      max-width: 60%;
-      font-weight: 600;
-      text-align: right;
-      color: var(--text-dark);
-      word-break: break-all;
-    }
-
-    .location-row-value.empty {
-      font-weight: 400;
-      color: var(--text-light);
-    }
-
-    /* ========== ปุ่ม ========== */
-    .btn-gps {
-      width: 100%;
-      margin-bottom: 10px;
-      padding: 13px;
-      font-family: 'Sarabun', sans-serif;
-      font-size: .95rem;
-      font-weight: 700;
-      color: var(--white);
-      background: linear-gradient(135deg, var(--blue-mid), var(--blue-light));
-      border: none;
-      border-radius: var(--radius-sm);
-      box-shadow: 0 4px 12px rgba(26, 86, 196, .25);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      transition: opacity .2s, transform .1s;
-    }
-
-    .btn-gps:active {
-      opacity: .85;
-      transform: scale(.98);
-    }
-
-    .btn-save {
-      width: 100%;
-      padding: 14px;
-      font-family: 'Sarabun', sans-serif;
-      font-size: 1rem;
-      font-weight: 800;
-      color: var(--white);
-      background: linear-gradient(135deg, var(--green), var(--green-light));
-      border: none;
-      border-radius: var(--radius-sm);
-      box-shadow: 0 4px 14px rgba(22, 163, 74, .28);
-      cursor: pointer;
-      transition: opacity .2s, transform .1s;
-    }
-
-    .btn-save:active {
-      opacity: .85;
-      transform: scale(.98);
-    }
-
-    .btn-save:disabled {
-      opacity: .5;
-      cursor: not-allowed;
-    }
-
-    .btn-report {
-      width: 100%;
-      margin-top: 10px;
-      padding: 13px;
-      font-family: 'Sarabun', sans-serif;
-      font-size: .95rem;
-      font-weight: 700;
-      color: #b45309;
-      background: #fff7ed;
-      border: 1.5px solid #fdba74;
-      border-radius: var(--radius-sm);
-      cursor: pointer;
-      transition: opacity .2s, transform .1s;
-    }
-
-    .btn-report:active {
-      opacity: .85;
-      transform: scale(.98);
-    }
-
-    /* ========== เส้นคั่น ========== */
-    .section-divider {
-      height: 1px;
-      margin: 18px 0;
-      background: var(--border);
-    }
-
-    /* ========== ปรับแต่ง SweetAlert ========== */
-    .swal2-popup {
-      font-family: 'Sarabun', sans-serif !important;
-      border-radius: 18px !important;
-    }
-
-    .swal2-title {
-      font-size: 1.2rem !important;
-    }
-
-    .swal2-html-container {
-      font-size: .95rem !important;
-    }
+    .section-divider { height:1px; margin:18px 0; background:var(--border); }
+    .swal2-popup { font-family:'Sarabun',sans-serif !important; border-radius:18px !important; }
+    .swal2-title { font-size:1.2rem !important; }
+    .swal2-html-container { font-size:.95rem !important; }
   </style>
 </head>
 
 <body>
   <div class="app-shell">
-
-    <!-- ===== ส่วนหัว ===== -->
     <div class="app-header">
       <div class="header-logo">
-        <img src="https://lh3.googleusercontent.com/d/1aS6GWRPckJs4wg4tAzcwvs73KZRufrAZ"
+        <img src="https://lh3.googleusercontent.com/d/1ne4WMQvbq1QRV32BDA-u7rOO2tOYoqPv"
              alt="โลโก้"
              onerror="this.style.display='none'; this.parentElement.style.fontSize='28px'; this.parentElement.textContent='🏛️';">
       </div>
@@ -390,15 +103,11 @@
       </div>
     </div>
 
-    <!-- ===== เนื้อหา ===== -->
     <div class="card-body-wrap">
       <form id="locationForm">
 
-        <!-- เลือกหลักสูตร -->
         <div class="field-group">
-          <div class="field-label">
-            <div class="field-icon">📚</div> เลือกหลักสูตร
-          </div>
+          <div class="field-label"><div class="field-icon">📚</div> เลือกหลักสูตร</div>
           <div class="select-wrap">
             <select class="app-select" id="courseType" onchange="updateNameDropdown();" required>
               <option value="" selected disabled>-- กำลังโหลดหลักสูตร... --</option>
@@ -406,18 +115,14 @@
           </div>
         </div>
 
-        <!-- ชื่อ-นามสกุล -->
         <div class="field-group">
-          <div class="field-label">
-            <div class="field-icon">👤</div> ชื่อ-นามสกุล
-          </div>
+          <div class="field-label"><div class="field-icon">👤</div> ชื่อ-นามสกุล</div>
           <input type="text" class="app-input" id="name" list="nameList"
                  placeholder="กรุณาเลือกหลักสูตรด้านบนก่อน..." required disabled>
           <datalist id="nameList"></datalist>
           <div class="locked-msg" id="lockedMsg">🔒 บัญชี LINE นี้ผูกกับชื่อของคุณแล้ว</div>
         </div>
 
-        <!-- กล่องสถานะ เข้า/ออก -->
         <div class="field-group">
           <div class="field-label"></div>
           <div class="timetype-box" id="timeTypeDisplay">กรุณาเลือกหลักสูตรและชื่อก่อน...</div>
@@ -426,7 +131,6 @@
 
         <div class="section-divider"></div>
 
-        <!-- ตำแหน่ง GPS -->
         <div class="field-group">
           <div class="field-label"></div>
           <button type="button" class="btn-gps" onclick="getLocation()">ตรวจสอบตำแหน่งของคุณ</button>
@@ -448,25 +152,19 @@
 
         <div class="section-divider"></div>
 
-        <!-- ปุ่มบันทึก -->
         <button type="submit" class="btn-save" id="saveBtn">✅ บันทึกข้อมูล</button>
 
-        <!-- ปุ่มเปิดกล่องแจ้งปัญหา -->
         <button type="button" class="btn-report" id="reportBtn" onclick="toggleReportBox(true)">แจ้งปัญหาพร้อมแนบภาพหน้าจอ</button>
 
-        <!-- กล่องแจ้งปัญหา (ซ่อนไว้ตอนแรก) -->
         <div id="reportBox" style="display:none;margin-top:14px;padding:16px;border:1.5px solid #fdba74;border-radius:10px;background:#fff7ed">
           <div style="font-weight:700;color:#b45309;margin-bottom:10px">แจ้งปัญหา</div>
-
           <textarea id="rp-desc" class="app-input" placeholder="อธิบายปัญหาที่พบ..."
                     style="width:100%;height:110px;resize:vertical;margin-bottom:10px"></textarea>
-
           <button type="button" id="rp-pick" onclick="document.getElementById('reportImage').click()"
                   style="width:100%;padding:12px;margin-bottom:8px;background:#f97316;color:#fff;border:none;border-radius:10px;font-family:'Sarabun',sans-serif;font-size:.95rem;font-weight:700;cursor:pointer">
             แนบภาพหน้าจอ
           </button>
           <div id="rp-imgname" style="font-size:.85rem;color:#16a34a;margin-bottom:10px;min-height:18px"></div>
-
           <div style="display:flex;gap:8px">
             <button type="button" onclick="submitReport()"
                     style="flex:1;padding:12px;background:#16a34a;color:#fff;border:none;border-radius:10px;font-family:'Sarabun',sans-serif;font-size:.95rem;font-weight:700;cursor:pointer">
@@ -481,38 +179,25 @@
 
       </form>
     </div>
-
   </div>
 
-  <!-- input ซ่อน สำหรับเลือกภาพหน้าจอ -->
   <input type="file" id="reportImage" accept="image/*" style="display:none">
 
-
   <script>
-    // ============================================================
-    //  ⚠️ ค่าที่ต้องตรวจสอบ / แก้ไขให้เป็นของคุณ
-    // ============================================================
     const LIFF_ID = '2010291124-cuelzcch';
-    const API_URL = 'https://script.google.com/macros/s/AKfycbw7t4jf-tYLZSC1OCZPP0TG5kxQ-zaRXVYdIozyX2SkAmFU7SGwzUT5YQaFeoQdE8tP/exec';
+    const API_URL = 'https://script.google.com/macros/s/AKfycbzBfoC-ZvdhgJ6aXaasbl9WblaM8gLs3cx22lSbZkE4Dmmeq7fZEu0GM-gX3eqClKVq/exec';
 
-    // พิกัดจุดฝึก — จะอัปเดตตามหลักสูตรที่เลือก (ค่าเริ่มต้นเผื่อโหลดไม่ทัน)
     let TARGET_LAT = 19.06117421820639;
     let TARGET_LNG = 99.92800924500672;
     let MAX_DIST   = 93;
-    // ============================================================
 
-    let lineUserId      = '';   // รหัสผู้ใช้ LINE
-    let lineDisplayName = '';   // ชื่อโปรไฟล์ LINE
-    let liffReady       = false;
+    let lineUserId = '';
+    let lineDisplayName = '';
+    let liffReady = false;
 
-
-    /* ============================================================
-       เรียก API หลังบ้าน (Apps Script)
-       ============================================================ */
     async function callApi(action, payload) {
       const res = await fetch(API_URL, {
         method: 'POST',
-        // ใช้ text/plain เพื่อเลี่ยง CORS preflight ของ Apps Script
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({ action, ...payload })
       });
@@ -521,66 +206,39 @@
       return data.result;
     }
 
-
-    /* ============================================================
-       เริ่มต้น LIFF
-       ============================================================ */
     async function initLiff() {
       try {
         await liff.init({ liffId: LIFF_ID });
-
-        // ยังไม่ล็อกอิน → ส่งไปล็อกอินแล้วกลับมาหน้าเดิม
-        if (!liff.isLoggedIn()) {
-          liff.login({ redirectUri: window.location.href });
-          return;
-        }
-
-        // ดึง userId + displayName จากโปรไฟล์
+        if (!liff.isLoggedIn()) { liff.login({ redirectUri: window.location.href }); return; }
         let uid = '';
         try {
           const profile = await liff.getProfile();
           uid = profile.userId || '';
           lineDisplayName = profile.displayName || '';
-        } catch (err) {
-          console.warn('getProfile failed:', err);
-        }
-
-        // สำรอง: ถ้า getProfile ไม่ได้ ลองดึงจาก ID Token
+        } catch (err) { console.warn('getProfile failed:', err); }
         if (!uid) {
           const idToken = liff.getDecodedIDToken();
           if (idToken && idToken.sub) uid = idToken.sub;
         }
-
         if (!uid) throw new Error('ดึง userId ไม่สำเร็จ');
-
         lineUserId = uid;
-        liffReady  = true;
-        console.log('LINE ID =', lineUserId, '| Name =', lineDisplayName);
+        liffReady = true;
 
-        // ตรวจว่า ID นี้ผูกกับชื่อไว้แล้วหรือยัง
         const linkedName = await callApi('getLinkedName', { lineUserId });
         if (linkedName) {
           const nameInput = document.getElementById('name');
           nameInput.value = linkedName;
           nameInput.disabled = true;
           document.getElementById('lockedMsg').style.display = 'block';
-
           const courseSelect = document.getElementById('courseType');
           if (courseSelect.value) checkTimeType(linkedName, courseSelect.value);
         }
-
       } catch (e) {
         Swal.fire({ icon: 'error', title: 'LIFF Error', text: e.message || JSON.stringify(e) });
-        console.error('LIFF Error:', e);
       }
     }
-
     initLiff();
 
-
-    /* ============================================================
-       โหลดรายชื่อหลักสูตรจากชีต name มาสร้าง dropdown อัตโนมัติ
-       ============================================================ */
     async function loadCourses() {
       const sel = document.getElementById('courseType');
       try {
@@ -588,27 +246,19 @@
         sel.innerHTML = '<option value="" selected disabled>-- กรุณาเลือกหลักสูตรก่อน --</option>';
         (courses || []).forEach(c => {
           const opt = document.createElement('option');
-          opt.value = c;
-          opt.textContent = c;
-          sel.appendChild(opt);
+          opt.value = c; opt.textContent = c; sel.appendChild(opt);
         });
       } catch (e) {
         sel.innerHTML = '<option value="" selected disabled>-- โหลดหลักสูตรไม่สำเร็จ --</option>';
       }
     }
-
     loadCourses();
 
-
-    /* ============================================================
-       ดึงรายชื่อตามหลักสูตร
-       ============================================================ */
     async function updateNameDropdown() {
       const courseType = document.getElementById('courseType').value;
-      const nameInput  = document.getElementById('name');
-      const lockedMsg  = document.getElementById('lockedMsg');
+      const nameInput = document.getElementById('name');
+      const lockedMsg = document.getElementById('lockedMsg');
 
-      // ถ้าบัญชีถูกล็อกชื่อไว้แล้ว ไม่ต้องดึงรายชื่อใหม่
       if (lockedMsg.style.display === 'block') {
         const lockedName = nameInput.value;
         if (courseType && lockedName) checkTimeType(lockedName, courseType);
@@ -621,67 +271,44 @@
       resetTimeTypeBox();
 
       if (courseType) {
-        // ดึงพิกัดจุดฝึกของหลักสูตรนี้
         loadCourseLocation(courseType);
-
         try {
           const names = await callApi('getNamesByCourse', { courseType });
           fillNameList(names);
           nameInput.disabled = false;
           nameInput.placeholder = 'พิมพ์ชื่อ-นามสกุลของคุณ...';
         } catch (e) {
-          // ถึงดึงรายชื่อไม่ได้ ก็ยังให้พิมพ์ชื่อเองลงทะเบียนได้
           nameInput.disabled = false;
           nameInput.placeholder = 'พิมพ์ชื่อ-นามสกุลของคุณ...';
         }
       }
     }
 
-
-    /* ── ดึงพิกัดจุดฝึกของหลักสูตรที่เลือก มาตั้งเป็นเป้าหมาย ── */
     async function loadCourseLocation(courseType) {
       try {
         const loc = await callApi('getCourseLocation', { course: courseType });
         if (loc && loc.lat && loc.lng) {
-          TARGET_LAT = loc.lat;
-          TARGET_LNG = loc.lng;
-          MAX_DIST   = loc.radius || 93;
+          TARGET_LAT = loc.lat; TARGET_LNG = loc.lng; MAX_DIST = loc.radius || 93;
         }
-      } catch (e) {
-        // ถ้าดึงไม่ได้ ใช้ค่าเริ่มต้นที่ตั้งไว้
-        console.warn('โหลดพิกัดหลักสูตรไม่สำเร็จ:', e);
-      }
+      } catch (e) { console.warn('โหลดพิกัดหลักสูตรไม่สำเร็จ:', e); }
     }
 
-
-    /* เก็บรายชื่อทั้งหมดของหลักสูตรไว้ (ยังไม่แสดง จนกว่าจะพิมพ์ครบ 3 ตัว) */
     let allNames = [];
-
     function fillNameList(names) {
       allNames = names || [];
-      // ล้าง datalist ไว้ก่อน ยังไม่แสดงรายชื่อใด ๆ เพื่อความเป็นส่วนตัว
       document.getElementById('nameList').innerHTML = '';
     }
-
-    /* กรองรายชื่อตามที่พิมพ์ — แสดงเฉพาะเมื่อพิมพ์ครบ 3 ตัวอักษรขึ้นไป */
     function filterNameList(keyword) {
       const nameList = document.getElementById('nameList');
       nameList.innerHTML = '';
       const kw = String(keyword || '').trim();
-      // พิมพ์ไม่ถึง 3 ตัว → ไม่แสดงรายชื่อ
       if (kw.length < 3) return;
-      // แสดงเฉพาะชื่อที่มีคำที่พิมพ์อยู่ในชื่อ
-      allNames
-        .filter(name => String(name).includes(kw))
-        .forEach(name => {
-          const option = document.createElement('option');
-          option.value = name;
-          nameList.appendChild(option);
-        });
+      allNames.filter(name => String(name).includes(kw)).forEach(name => {
+        const option = document.createElement('option');
+        option.value = name; nameList.appendChild(option);
+      });
     }
 
-
-    /* รีเซ็ตกล่องสถานะ เข้า/ออก */
     function resetTimeTypeBox() {
       const box = document.getElementById('timeTypeDisplay');
       box.className = 'timetype-box';
@@ -689,12 +316,9 @@
       document.getElementById('timeType').value = '';
     }
 
-
-    /* ============================================================
-       ตรวจสอบประเภท เข้า/ออก/ครบ
-       ============================================================ */
+    /* ตรวจสถานะ 4 ช่วง: เข้าฝึก / พักเที่ยง / เข้าบ่าย / เลิกฝึก */
     async function checkTimeType(name, course) {
-      const box    = document.getElementById('timeTypeDisplay');
+      const box = document.getElementById('timeTypeDisplay');
       const hidden = document.getElementById('timeType');
       box.className = 'timetype-box';
       box.textContent = '⏳ กำลังตรวจสอบ...';
@@ -703,214 +327,145 @@
       try {
         const type = await callApi('checkAttendanceType', { name, course });
         hidden.value = type;
-        box.classList.remove('enter', 'exit', 'full');
+        box.classList.remove('morning', 'lunch', 'afternoon', 'evening', 'full');
 
-        if (type === 'เข้าฝึกอบรม') {
-          box.classList.add('enter');
-          box.textContent = '🟢 เข้าฝึกอบรม';
-        } else if (type === 'ออกฝึกอบรม') {
-          box.classList.add('exit');
-          box.textContent = '🔵 ออกฝึกอบรม';
+        if (type === 'เข้าฝึก') {
+          box.classList.add('morning');
+          box.textContent = '🟢 เข้าฝึก (ช่วงเช้า)';
+        } else if (type === 'พักเที่ยง') {
+          box.classList.add('lunch');
+          box.textContent = '🟡 พักเที่ยง';
+        } else if (type === 'เข้าบ่าย') {
+          box.classList.add('afternoon');
+          box.textContent = '🔵 เข้าบ่าย';
+        } else if (type === 'เลิกฝึก') {
+          box.classList.add('evening');
+          box.textContent = '🟣 เลิกฝึก';
         } else {
           box.classList.add('full');
-          box.textContent = '⚠️ ลงทะเบียนครบทั้งเข้าและออกแล้ววันนี้';
+          box.textContent = '⚠️ ลงทะเบียนครบทั้ง 4 ช่วงแล้ววันนี้';
         }
       } catch (e) {
         box.textContent = 'ตรวจสอบไม่สำเร็จ';
       }
     }
 
-
-    /* เมื่อเลือก/พิมพ์ชื่อเสร็จ ให้ตรวจสถานะ
-       รองรับทั้งการเลือกจากรายการ และการพิมพ์ชื่อใหม่เอง */
     let nameCheckTimer = null;
-
     function triggerTimeCheck() {
-      const name   = document.getElementById('name').value.trim();
+      const name = document.getElementById('name').value.trim();
       const course = document.getElementById('courseType').value;
       if (!name || !course) return;
       checkTimeType(name, course);
     }
-
     const nameEl = document.getElementById('name');
-
-    // เลือกจาก datalist หรือกด Enter
     nameEl.addEventListener('change', triggerTimeCheck);
-
-    // พิมพ์เอง → กรองรายชื่อทันที + หน่วง 0.6 วิ ค่อยตรวจสถานะ
     nameEl.addEventListener('input', function () {
-      filterNameList(this.value);   // แสดงรายชื่อเฉพาะเมื่อพิมพ์ครบ 3 ตัว
+      filterNameList(this.value);
       clearTimeout(nameCheckTimer);
       nameCheckTimer = setTimeout(triggerTimeCheck, 600);
     });
-
-    // คลิกออกจากช่อง → ตรวจทันที
     nameEl.addEventListener('blur', triggerTimeCheck);
 
-
-    /* ============================================================
-       ตรวจสอบตำแหน่ง GPS
-       ============================================================ */
     function getLocation() {
       if (!navigator.geolocation) {
-        Swal.fire({
-          icon: 'error',
-          title: 'ไม่รองรับ GPS',
-          html: 'กรุณาใช้ <b>Chrome</b> หรือ <b>Safari</b> เวอร์ชันล่าสุด'
-        });
+        Swal.fire({ icon:'error', title:'ไม่รองรับ GPS', html:'กรุณาใช้ <b>Chrome</b> หรือ <b>Safari</b> เวอร์ชันล่าสุด' });
         return;
       }
-
       Swal.fire({
-        title: '📡 กำลังตรวจสอบพิกัด',
-        html: 'กรุณา <b>อนุญาต</b> การเข้าถึงตำแหน่ง',
-        allowOutsideClick: false,
+        title:'📡 กำลังตรวจสอบพิกัด', html:'กรุณา <b>อนุญาต</b> การเข้าถึงตำแหน่ง',
+        allowOutsideClick:false,
         didOpen: () => {
           Swal.showLoading();
           navigator.geolocation.getCurrentPosition(
-            // สำเร็จ
             (pos) => {
               const lat = pos.coords.latitude.toFixed(8);
               const lng = pos.coords.longitude.toFixed(8);
-              document.getElementById('latitude').value  = lat;
+              document.getElementById('latitude').value = lat;
               document.getElementById('longitude').value = lng;
-
-              const locEl  = document.getElementById('yourLocation');
+              const locEl = document.getElementById('yourLocation');
               const distEl = document.getElementById('distance');
               locEl.textContent = `${lat}, ${lng}`;
               locEl.classList.remove('empty');
-
-              const dist   = calculateDistance(lat, lng, TARGET_LAT, TARGET_LNG);
+              const dist = calculateDistance(lat, lng, TARGET_LAT, TARGET_LNG);
               const inZone = dist <= MAX_DIST;
-
               distEl.textContent = `${dist.toFixed(2)} เมตร ${inZone ? '✅' : '❌'}`;
               distEl.classList.remove('empty');
               distEl.style.color = inZone ? 'var(--green)' : '#dc2626';
-
               Swal.close();
               Swal.fire({
                 icon: inZone ? 'success' : 'warning',
                 title: inZone ? '✅ อยู่ในพื้นที่อบรม' : '⚠️ อยู่นอกพื้นที่อบรม',
-                text: `ระยะห่าง: ${dist.toFixed(2)} เมตร`,
-                timer: 2500,
-                showConfirmButton: false
+                text: `ระยะห่าง: ${dist.toFixed(2)} เมตร`, timer:2500, showConfirmButton:false
               });
             },
-            // ผิดพลาด
             (err) => {
               Swal.close();
               let title = 'ไม่สามารถดึงพิกัดได้', msg = '';
               switch (err.code) {
-                case err.PERMISSION_DENIED:
-                  title = '🚫 ถูกปฏิเสธสิทธิ์';
-                  msg = 'กรุณาอนุญาตการเข้าถึงตำแหน่ง';
-                  break;
-                case err.POSITION_UNAVAILABLE:
-                  title = '📡 ไม่พบสัญญาณ GPS';
-                  msg = 'กรุณาออกไปที่โล่งแจ้ง';
-                  break;
-                case err.TIMEOUT:
-                  title = '⏱ หมดเวลา';
-                  msg = 'กรุณาลองใหม่';
-                  break;
-                default:
-                  msg = 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+                case err.PERMISSION_DENIED: title='🚫 ถูกปฏิเสธสิทธิ์'; msg='กรุณาอนุญาตการเข้าถึงตำแหน่ง'; break;
+                case err.POSITION_UNAVAILABLE: title='📡 ไม่พบสัญญาณ GPS'; msg='กรุณาออกไปที่โล่งแจ้ง'; break;
+                case err.TIMEOUT: title='⏱ หมดเวลา'; msg='กรุณาลองใหม่'; break;
+                default: msg='เกิดข้อผิดพลาด กรุณาลองใหม่';
               }
-              Swal.fire({ icon: 'error', title, html: msg, confirmButtonText: 'รับทราบ' });
+              Swal.fire({ icon:'error', title, html:msg, confirmButtonText:'รับทราบ' });
             },
-            { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+            { enableHighAccuracy:true, timeout:15000, maximumAge:0 }
           );
         }
       });
     }
 
-
-    /* ============================================================
-       คำนวณระยะทาง (สูตร Haversine) คืนค่าเป็นเมตร
-       ============================================================ */
     function calculateDistance(lat1, lon1, lat2, lon2) {
-      const R = 6371;   // รัศมีโลก (กม.)
+      const R = 6371;
       const dLat = toRad(lat2 - lat1);
       const dLon = toRad(lon2 - lon1);
-      const a = Math.sin(dLat / 2) ** 2 +
-                Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
-      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)) * 1000;
+      const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)) * 1000;
     }
+    function toRad(d) { return d * Math.PI / 180; }
 
-    function toRad(d) {
-      return d * Math.PI / 180;
-    }
-
-
-    /* ============================================================
-       กดบันทึกข้อมูล
-       ============================================================ */
     document.getElementById('locationForm').addEventListener('submit', async function (e) {
       e.preventDefault();
-
-      // เช็กว่าได้ LINE ID มาแล้วหรือยัง
       if (!liffReady || !lineUserId) {
         Swal.fire('ยังไม่พร้อม', 'ยังดึงข้อมูล LINE ไม่สำเร็จ กรุณาปิดแล้วเปิดลิงก์ใหม่ในแอป LINE', 'warning');
         return;
       }
-
-      const name       = document.getElementById('name').value;
-      let   timeType   = document.getElementById('timeType').value;
+      const name = document.getElementById('name').value;
+      let timeType = document.getElementById('timeType').value;
       const courseType = document.getElementById('courseType').value;
-      const latInput   = document.getElementById('latitude').value;
-      const lngInput   = document.getElementById('longitude').value;
+      const latInput = document.getElementById('latitude').value;
+      const lngInput = document.getElementById('longitude').value;
 
-      // ตรวจความครบถ้วน
-      if (!name || !courseType) {
-        Swal.fire('ผิดพลาด', 'กรุณาเลือกหลักสูตรและชื่อ', 'error');
-        return;
-      }
+      if (!name || !courseType) { Swal.fire('ผิดพลาด', 'กรุณาเลือกหลักสูตรและชื่อ', 'error'); return; }
 
-      // ถ้าสถานะยังว่าง (ตรวจไม่ทัน) ลองตรวจอีกครั้งก่อนบันทึก
       if (!timeType) {
         try {
           timeType = await callApi('checkAttendanceType', { name, course: courseType });
           document.getElementById('timeType').value = timeType;
         } catch (err) {
-          Swal.fire('ผิดพลาด', 'ตรวจสอบสถานะเข้า/ออกไม่สำเร็จ กรุณาลองใหม่', 'error');
-          return;
+          Swal.fire('ผิดพลาด', 'ตรวจสอบสถานะไม่สำเร็จ กรุณาลองใหม่', 'error'); return;
         }
       }
 
       if (timeType === 'ลงทะเบียนครบแล้ว') {
-        Swal.fire('ไม่สามารถบันทึกได้', 'คุณลงทะเบียนครบทั้งเข้าและออกแล้ววันนี้', 'warning');
-        return;
+        Swal.fire('ไม่สามารถบันทึกได้', 'คุณลงทะเบียนครบทั้ง 4 ช่วงแล้ววันนี้', 'warning'); return;
       }
-      if (!latInput || !lngInput) {
-        Swal.fire('ผิดพลาด', 'กรุณาตรวจสอบตำแหน่งก่อนบันทึก', 'error');
-        return;
-      }
+      if (!latInput || !lngInput) { Swal.fire('ผิดพลาด', 'กรุณาตรวจสอบตำแหน่งก่อนบันทึก', 'error'); return; }
 
-      // ตรวจระยะทาง
-      const lat  = parseFloat(latInput);
-      const lng  = parseFloat(lngInput);
+      const lat = parseFloat(latInput);
+      const lng = parseFloat(lngInput);
       const dist = calculateDistance(lat, lng, TARGET_LAT, TARGET_LNG);
       if (dist > MAX_DIST) {
-        Swal.fire('ไม่สามารถบันทึกได้', `ห่างจากสถานที่ ${dist.toFixed(0)} เมตร (เกิน ${MAX_DIST} เมตร)`, 'error');
-        return;
+        Swal.fire('ไม่สามารถบันทึกได้', `ห่างจากสถานที่ ${dist.toFixed(0)} เมตร (เกิน ${MAX_DIST} เมตร)`, 'error'); return;
       }
 
-      // ส่งข้อมูลไปบันทึก
-      Swal.fire({ title: '⏳ กำลังบันทึก...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-
+      Swal.fire({ title:'⏳ กำลังบันทึก...', allowOutsideClick:false, didOpen:()=>Swal.showLoading() });
       try {
         await callApi('saveData', {
-          type: timeType,
-          name: name,
-          courseType: courseType,
-          latitude: lat,
-          longitude: lng,
-          lineUserId: lineUserId,
-          displayName: lineDisplayName
+          type: timeType, name: name, courseType: courseType,
+          latitude: lat, longitude: lng, lineUserId: lineUserId, displayName: lineDisplayName
         });
-
-        // สำเร็จ → รีเซ็ตฟอร์ม
-        Swal.fire('สำเร็จ ✅', 'บันทึกข้อมูลเรียบร้อยแล้ว', 'success').then(() => {
+        Swal.fire('สำเร็จ ✅', `บันทึก "${timeType}" เรียบร้อยแล้ว`, 'success').then(() => {
           document.getElementById('yourLocation').textContent = 'ยังไม่ได้ตรวจสอบ';
           document.getElementById('yourLocation').classList.add('empty');
           document.getElementById('distance').textContent = 'ยังไม่ได้ตรวจสอบ';
@@ -918,97 +473,70 @@
           document.getElementById('distance').style.color = '';
           document.getElementById('latitude').value = '';
           document.getElementById('longitude').value = '';
-
-          // ถ้ายังไม่ถูกล็อกชื่อ ให้ล้างหลักสูตร+ชื่อด้วย
           const lockedMsg = document.getElementById('lockedMsg');
           if (lockedMsg.style.display !== 'block') {
             document.getElementById('courseType').value = '';
             document.getElementById('name').value = '';
             document.getElementById('name').disabled = true;
+          } else {
+            // ถูกล็อกชื่อ → ตรวจสถานะช่วงถัดไปให้เลย
+            if (courseType) checkTimeType(name, courseType);
           }
           resetTimeTypeBox();
         });
-
       } catch (err) {
         Swal.fire('ผิดพลาด', err.message, 'error');
       }
     });
 
-
-    /* ============================================================
-       แจ้งปัญหา พร้อมแนบภาพหน้าจอ (กล่องฝังในหน้า ทนการสลับแอป)
-       ============================================================ */
-    let reportImageBase64 = '';   // เก็บภาพที่เลือก (Base64)
-    let reportImageType   = '';   // ชนิดไฟล์ภาพ
-
-    // เปิด/ปิดกล่องแจ้งปัญหา
+    /* แจ้งปัญหา */
+    let reportImageBase64 = '', reportImageType = '';
     function toggleReportBox(show) {
       const box = document.getElementById('reportBox');
       const btn = document.getElementById('reportBtn');
       if (show) {
-        // รีเซ็ตค่าเก่า
-        reportImageBase64 = '';
-        reportImageType   = '';
+        reportImageBase64 = ''; reportImageType = '';
         document.getElementById('reportImage').value = '';
         document.getElementById('rp-desc').value = '';
         document.getElementById('rp-imgname').textContent = '';
-        box.style.display = 'block';
-        btn.style.display = 'none';
-        box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        box.style.display = 'block'; btn.style.display = 'none';
+        box.scrollIntoView({ behavior:'smooth', block:'center' });
       } else {
-        box.style.display = 'none';
-        btn.style.display = 'block';
+        box.style.display = 'none'; btn.style.display = 'block';
       }
     }
-
-    // เมื่อเลือกรูป → แปลงเป็น Base64 เก็บไว้
     document.getElementById('reportImage').addEventListener('change', function (e) {
       const file = e.target.files[0];
       if (!file) return;
-
-      // จำกัดขนาดไฟล์ไม่เกิน 5MB
       if (file.size > 5 * 1024 * 1024) {
         document.getElementById('rp-imgname').textContent = '⚠️ ไฟล์ใหญ่เกิน 5MB กรุณาเลือกรูปเล็กลง';
         document.getElementById('rp-imgname').style.color = '#dc2626';
-        this.value = '';
-        return;
+        this.value = ''; return;
       }
-
       const reader = new FileReader();
       reader.onload = function (ev) {
         const result = ev.target.result;
         reportImageBase64 = result.split(',')[1] || '';
-        reportImageType   = file.type || 'image/png';
-
-        const nameEl = document.getElementById('rp-imgname');
-        nameEl.style.color = '#16a34a';
-        nameEl.textContent = '✅ แนบรูปแล้ว: ' + file.name;
+        reportImageType = file.type || 'image/png';
+        const el = document.getElementById('rp-imgname');
+        el.style.color = '#16a34a';
+        el.textContent = '✅ แนบรูปแล้ว: ' + file.name;
       };
       reader.readAsDataURL(file);
     });
-
-    // ส่งปัญหา
     async function submitReport() {
       const desc = document.getElementById('rp-desc').value.trim();
-      if (!desc) {
-        Swal.fire('กรุณากรอก', 'กรุณากรอกคำอธิบายปัญหา', 'warning');
-        return;
-      }
-
-      Swal.fire({ title: '⏳ กำลังส่งปัญหา...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-
+      if (!desc) { Swal.fire('กรุณากรอก', 'กรุณากรอกคำอธิบายปัญหา', 'warning'); return; }
+      Swal.fire({ title:'⏳ กำลังส่งปัญหา...', allowOutsideClick:false, didOpen:()=>Swal.showLoading() });
       try {
         await callApi('reportProblem', {
           description: desc,
-          name:        document.getElementById('name').value || '',
-          courseType:  document.getElementById('courseType').value || '',
-          lineUserId:  lineUserId || '',
-          displayName: lineDisplayName || '',
-          imageBase64: reportImageBase64,
-          imageType:   reportImageType
+          name: document.getElementById('name').value || '',
+          courseType: document.getElementById('courseType').value || '',
+          lineUserId: lineUserId || '', displayName: lineDisplayName || '',
+          imageBase64: reportImageBase64, imageType: reportImageType
         });
-
-        toggleReportBox(false);   // ปิดกล่อง
+        toggleReportBox(false);
         Swal.fire('ส่งสำเร็จ ✅', 'ขอบคุณที่แจ้งปัญหา เจ้าหน้าที่จะตรวจสอบให้', 'success');
       } catch (err) {
         Swal.fire('ส่งไม่สำเร็จ', err.message, 'error');

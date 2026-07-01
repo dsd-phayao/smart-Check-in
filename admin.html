@@ -14,7 +14,7 @@
     }
     * { box-sizing:border-box; margin:0; padding:0; }
     html,body { font-family:'Sarabun',sans-serif; background:#f1f5f9; min-height:100vh; }
-    .wrap { max-width:480px; margin:0 auto; min-height:100vh; background:#fff; }
+    .wrap { max-width:520px; margin:0 auto; min-height:100vh; background:#fff; }
 
     .head {
       background:linear-gradient(145deg,var(--navy),var(--blue));
@@ -37,6 +37,7 @@
       outline:none; appearance:none; -webkit-appearance:none;
     }
     select:focus, input:focus { border-color:var(--bluelt); box-shadow:0 0 0 3px rgba(59,130,246,.1); }
+    input[type=date] { -webkit-appearance:none; }
 
     .card {
       border:1.5px solid var(--border); border-radius:var(--radius);
@@ -126,31 +127,52 @@
 
       <div class="divider"></div>
 
-      <!-- ส่วนตรวจสอบเรียลไทม์ -->
+      <!-- ส่วนตรวจสอบ -->
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-        <span style="font-weight:700;color:#0f172a;font-size:1rem">ตรวจสอบการเช็กชื่อวันนี้</span>
+        <span style="font-weight:700;color:#0f172a;font-size:1rem">ตรวจสอบการเช็กชื่อ</span>
         <button type="button" onclick="loadAttendance()" style="padding:7px 14px;background:#1a56c4;color:#fff;border:none;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer">🔄 รีเฟรช</button>
       </div>
 
-      <!-- การ์ดสรุปจำนวน -->
+      <!-- เลือกวันที่ (ปฏิทินย้อนหลัง) -->
+      <div class="field" style="margin-bottom:12px">
+        <label class="label">📅 เลือกวันที่ดูข้อมูล</label>
+        <div style="display:flex;gap:8px">
+          <input type="date" id="datePicker" style="flex:1" onchange="loadAttendance()">
+          <button type="button" onclick="setToday()" style="flex:0 0 80px;padding:12px 8px;background:#eff6ff;color:#1a56c4;border:1.5px solid #93c5fd;border-radius:10px;font-family:'Sarabun',sans-serif;font-size:.85rem;font-weight:700;cursor:pointer">วันนี้</button>
+        </div>
+        <div id="dateLabel" style="font-size:.8rem;color:#475569;margin-top:6px"></div>
+      </div>
+
+      <!-- การ์ดสรุปจำนวน 3 ช่อง -->
       <div id="summaryCards" style="display:flex;gap:8px;margin-bottom:12px">
         <div style="flex:1;text-align:center;padding:12px 6px;background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px">
-          <div id="cntEnter" style="font-size:1.6rem;font-weight:800;color:#16a34a">-</div>
-          <div style="font-size:.78rem;color:#475569">เข้าแล้ว</div>
+          <div id="cntMorning" style="font-size:1.6rem;font-weight:800;color:#16a34a">-</div>
+          <div style="font-size:.76rem;color:#475569">มาอบรม</div>
         </div>
-        <div style="flex:1;text-align:center;padding:12px 6px;background:#eff6ff;border:1.5px solid #93c5fd;border-radius:10px">
-          <div id="cntExit" style="font-size:1.6rem;font-weight:800;color:#1a56c4">-</div>
-          <div style="font-size:.78rem;color:#475569">ออกแล้ว</div>
+        <div style="flex:1;text-align:center;padding:8px 6px;background:#eff6ff;border:1.5px solid #93c5fd;border-radius:10px">
+          <select id="stepPicker" onchange="renderMissing()" style="width:100%;padding:6px 4px;font-size:.8rem;font-weight:700;color:#1a56c4;border:none;background:transparent;text-align:center;cursor:pointer">
+            <option value="morning">เข้าฝึก</option>
+            <option value="lunch">พักเที่ยง</option>
+            <option value="afternoon">เข้าบ่าย</option>
+            <option value="evening">เลิกฝึก</option>
+          </select>
+          <div style="font-size:.76rem;color:#475569;margin-top:2px">เลือกช่วงเวลา</div>
         </div>
-        <div style="flex:1;text-align:center;padding:12px 6px;background:#fff7ed;border:1.5px solid #fdba74;border-radius:10px">
-          <div id="cntTotal" style="font-size:1.6rem;font-weight:800;color:#b45309">-</div>
-          <div style="font-size:.78rem;color:#475569">รวมคน</div>
+        <div style="flex:1;text-align:center;padding:12px 6px;background:#f5f3ff;border:1.5px solid #c4b5fd;border-radius:10px">
+          <div id="cntComplete" style="font-size:1.6rem;font-weight:800;color:#7c3aed">-</div>
+          <div style="font-size:.76rem;color:#475569">ครบทุกช่วง</div>
         </div>
       </div>
 
-      <!-- ตารางรายชื่อ -->
-      <div id="attendBox" style="border:1.5px solid #e2e8f0;border-radius:10px;overflow:hidden">
-        <div id="attendList" style="font-size:.85rem">
+      <!-- ส่วนแสดงคนที่ยังไม่ลงในช่วงที่เลือก -->
+      <div id="missingBox" style="display:none;margin-bottom:12px;padding:12px 14px;background:#fef2f2;border:1.5px solid #fca5a5;border-radius:10px">
+        <div id="missingTitle" style="font-weight:700;color:#dc2626;font-size:.88rem;margin-bottom:8px"></div>
+        <div id="missingList" style="font-size:.85rem;color:#7f1d1d;line-height:1.7"></div>
+      </div>
+
+      <!-- ตารางรายชื่อ 4 ช่วง -->
+      <div id="attendBox" style="border:1.5px solid #e2e8f0;border-radius:10px;overflow:hidden;overflow-x:auto">
+        <div id="attendList" style="font-size:.82rem;min-width:460px">
           <div style="padding:20px;text-align:center;color:#94a3b8">เลือกหลักสูตรเพื่อดูข้อมูล</div>
         </div>
       </div>
@@ -158,7 +180,7 @@
   </div>
 
   <script>
-    const API_URL = 'https://script.google.com/macros/s/AKfycbw7t4jf-tYLZSC1OCZPP0TG5kxQ-zaRXVYdIozyX2SkAmFU7SGwzUT5YQaFeoQdE8tP/exec';
+    const API_URL = 'https://script.google.com/macros/s/AKfycbzBfoC-ZvdhgJ6aXaasbl9WblaM8gLs3cx22lSbZkE4Dmmeq7fZEu0GM-gX3eqClKVq/exec';
 
     let gotLat = '', gotLng = '';
 
@@ -171,6 +193,23 @@
       const data = await res.json();
       if (!data.ok) throw new Error(data.error || 'เกิดข้อผิดพลาด');
       return data.result;
+    }
+
+    /* ── แปลงค่า input[type=date] (YYYY-MM-DD) เป็นรูปแบบชีต (d/M/yyyy) ── */
+    function toSheetDate(ymd) {
+      if (!ymd) return '';
+      const [y, m, d] = ymd.split('-');
+      return parseInt(d) + '/' + parseInt(m) + '/' + y;   // ตัด 0 นำหน้าออก เช่น 8/6/2026
+    }
+
+    /* ── ตั้งค่าปฏิทินเป็นวันนี้ ── */
+    function setToday() {
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = String(now.getMonth() + 1).padStart(2, '0');
+      const d = String(now.getDate()).padStart(2, '0');
+      document.getElementById('datePicker').value = `${y}-${m}-${d}`;
+      loadAttendance();
     }
 
     // โหลดรายชื่อหลักสูตร
@@ -188,8 +227,9 @@
       }
     }
     loadCourses();
+    setToday();   // ตั้งวันที่เริ่มต้นเป็นวันนี้
 
-    // เมื่อเลือกหลักสูตร → แสดงพิกัดเดิม (ถ้ามี)
+    // เมื่อเลือกหลักสูตร → แสดงพิกัดเดิม + โหลดข้อมูล
     document.getElementById('courseSel').addEventListener('change', async function () {
       const course = this.value;
       const curEl = document.getElementById('curLoc');
@@ -207,57 +247,109 @@
       } catch (e) {
         curEl.textContent = 'โหลดไม่สำเร็จ';
       }
-      // โหลดข้อมูลการเช็กชื่อของหลักสูตรนี้ด้วย
       loadAttendance();
     });
-
 
     /* ── เปิด/ปิดกล่องตั้งจุดฝึก ── */
     function toggleLocBox(show) {
       document.getElementById('locBox').style.display = show ? 'block' : 'none';
     }
 
+    let lastList = [];   // เก็บข้อมูลล่าสุดไว้ใช้กับ renderMissing
 
-    /* ── โหลดข้อมูลการเช็กชื่อวันนี้ มาแสดงตาราง ── */
+    /* ── โหลดข้อมูลการเช็กชื่อตามวันที่เลือก มาแสดงตาราง 4 ช่วง ── */
     async function loadAttendance() {
       const course = document.getElementById('courseSel').value;
       const listEl = document.getElementById('attendList');
+      const ymd = document.getElementById('datePicker').value;
+      const sheetDate = toSheetDate(ymd);
+
+      // แสดง label วันที่
+      const lblEl = document.getElementById('dateLabel');
+      if (ymd) {
+        const dt = new Date(ymd + 'T00:00:00');
+        const thDays = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
+        const thMonths = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+        lblEl.textContent = 'กำลังดูข้อมูลวัน' + thDays[dt.getDay()] + 'ที่ ' + dt.getDate() + ' ' + thMonths[dt.getMonth()] + ' ' + (dt.getFullYear()+543);
+      } else {
+        lblEl.textContent = '';
+      }
+
       if (!course) return;
 
       listEl.innerHTML = '<div style="padding:20px;text-align:center;color:#94a3b8">กำลังโหลด...</div>';
 
       try {
-        const r = await callApi('getTodayAttendance', { course });
+        const r = await callApi('getTodayAttendance', { course, date: sheetDate });
+        lastList = r.list || [];
 
-        // อัปเดตการ์ดสรุป
-        document.getElementById('cntEnter').textContent = r.totalEnter;
-        document.getElementById('cntExit').textContent  = r.totalExit;
-        document.getElementById('cntTotal').textContent = r.totalPeople;
+        document.getElementById('cntMorning').textContent  = r.totalPeople;   // มาอบรม = จำนวนคนที่มา
+        document.getElementById('cntComplete').textContent = r.totalComplete; // ครบทุกช่วง
 
         if (!r.list || r.list.length === 0) {
-          listEl.innerHTML = '<div style="padding:20px;text-align:center;color:#94a3b8">ยังไม่มีใครเช็กชื่อวันนี้</div>';
+          listEl.innerHTML = '<div style="padding:20px;text-align:center;color:#94a3b8">ไม่มีข้อมูลการเช็กชื่อในวันนี้</div>';
+          document.getElementById('missingBox').style.display = 'none';
           return;
         }
 
-        // หัวตาราง
+        // หัวตาราง 4 ช่วง
         let html = '<div style="display:flex;background:#f1f5f9;font-weight:700;padding:10px 12px;border-bottom:1.5px solid #e2e8f0">'
-          + '<div style="flex:1">ชื่อ</div>'
-          + '<div style="width:70px;text-align:center;color:#16a34a">เข้า</div>'
-          + '<div style="width:70px;text-align:center;color:#1a56c4">ออก</div>'
+          + '<div style="flex:1;min-width:110px">ชื่อ</div>'
+          + '<div style="width:80px;text-align:center;color:#16a34a">เข้าฝึก</div>'
+          + '<div style="width:80px;text-align:center;color:#d97706">พักเที่ยง</div>'
+          + '<div style="width:80px;text-align:center;color:#1a56c4">เข้าบ่าย</div>'
+          + '<div style="width:80px;text-align:center;color:#7c3aed">เลิกฝึก</div>'
           + '</div>';
 
-        // แถวข้อมูล
         r.list.forEach((p, i) => {
           const bg = i % 2 === 0 ? '#ffffff' : '#f8fafc';
+          const cell = (v, color) => '<div style="width:80px;text-align:center;color:' + (v ? color : '#cbd5e1') + '">' + (v || '–') + '</div>';
           html += '<div style="display:flex;padding:10px 12px;background:' + bg + ';border-bottom:1px solid #f1f5f9">'
-            + '<div style="flex:1">' + escapeHtml(p.name) + '</div>'
-            + '<div style="width:70px;text-align:center;color:' + (p.enter ? '#16a34a' : '#cbd5e1') + '">' + (p.enter || '–') + '</div>'
-            + '<div style="width:70px;text-align:center;color:' + (p.exit ? '#1a56c4' : '#cbd5e1') + '">' + (p.exit || '–') + '</div>'
+            + '<div style="flex:1;min-width:110px">' + escapeHtml(p.name) + '</div>'
+            + cell(p.morning,   '#16a34a')
+            + cell(p.lunch,     '#d97706')
+            + cell(p.afternoon, '#1a56c4')
+            + cell(p.evening,   '#7c3aed')
             + '</div>';
         });
         listEl.innerHTML = html;
+
+        renderMissing();   // อัปเดตส่วนคนที่ยังไม่ลง
       } catch (e) {
         listEl.innerHTML = '<div style="padding:20px;text-align:center;color:#dc2626">โหลดไม่สำเร็จ: ' + e.message + '</div>';
+      }
+    }
+
+    /* ── แสดงคนที่ยังไม่ลงชื่อในช่วงที่เลือกจาก dropdown ── */
+    function renderMissing() {
+      const step = document.getElementById('stepPicker').value;
+      const box = document.getElementById('missingBox');
+      const titleEl = document.getElementById('missingTitle');
+      const listEl = document.getElementById('missingList');
+
+      const stepLabel = { morning:'เข้าฝึก', lunch:'พักเที่ยง', afternoon:'เข้าบ่าย', evening:'เลิกฝึก' }[step];
+
+      if (!lastList || lastList.length === 0) {
+        box.style.display = 'none';
+        return;
+      }
+
+      // หาคนที่ยังไม่ลงในช่วงนี้
+      const missing = lastList.filter(p => !p[step]).map(p => p.name);
+
+      box.style.display = 'block';
+      if (missing.length === 0) {
+        titleEl.textContent = '✅ ช่วง "' + stepLabel + '" — ลงครบทุกคนแล้ว';
+        titleEl.style.color = '#16a34a';
+        box.style.background = '#f0fdf4';
+        box.style.borderColor = '#86efac';
+        listEl.innerHTML = '';
+      } else {
+        titleEl.textContent = '⚠️ ยังไม่ได้ลงช่วง "' + stepLabel + '" (' + missing.length + ' คน)';
+        titleEl.style.color = '#dc2626';
+        box.style.background = '#fef2f2';
+        box.style.borderColor = '#fca5a5';
+        listEl.innerHTML = missing.map(n => '• ' + escapeHtml(n)).join('<br>');
       }
     }
 
