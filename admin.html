@@ -85,6 +85,25 @@
     </div>
 
     <div class="body">
+      <!-- ปุ่มเปิดกล่องเพิ่มหลักสูตรใหม่ -->
+      <button type="button" class="btn-open-loc" onclick="toggleAddCourseBox(true)" style="margin-bottom:12px">➕ เพิ่มหลักสูตรใหม่</button>
+
+      <!-- กล่องเพิ่มหลักสูตรใหม่ (ซ่อนไว้ตอนแรก) -->
+      <div id="addCourseBox" style="display:none;margin-bottom:16px;padding:16px;border:1.5px solid #86efac;border-radius:10px;background:#f0fdf4">
+        <div style="font-weight:700;color:#16a34a;margin-bottom:10px">เพิ่มหลักสูตรใหม่</div>
+        <input type="text" id="newCourseName" class="app-input" placeholder="กรอกหลักสูตรที่ต้องการเพิ่ม" style="margin-bottom:10px">
+        <div style="display:flex;gap:8px">
+          <button type="button" onclick="submitAddCourse()"
+                  style="flex:1;padding:12px;background:#16a34a;color:#fff;border:none;border-radius:10px;font-family:'Sarabun',sans-serif;font-size:.95rem;font-weight:700;cursor:pointer">
+            ➕ เพิ่มหลักสูตร
+          </button>
+          <button type="button" onclick="toggleAddCourseBox(false)"
+                  style="flex:0 0 90px;padding:12px;background:#e2e8f0;color:#475569;border:none;border-radius:10px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer">
+            ยกเลิก
+          </button>
+        </div>
+      </div>
+
       <div class="field">
         <label class="label">เลือกหลักสูตร</label>
         <select id="courseSel">
@@ -213,7 +232,7 @@
     }
 
     // โหลดรายชื่อหลักสูตร
-    async function loadCourses() {
+    async function loadCourses(selectValue) {
       const sel = document.getElementById('courseSel');
       try {
         const courses = await callApi('getCourses', {});
@@ -222,12 +241,45 @@
           const o = document.createElement('option');
           o.value = c; o.textContent = c; sel.appendChild(o);
         });
+        if (selectValue && courses && courses.indexOf(selectValue) !== -1) {
+          sel.value = selectValue;
+          sel.dispatchEvent(new Event('change'));
+        }
       } catch (e) {
         sel.innerHTML = '<option value="" selected disabled>-- โหลดไม่สำเร็จ --</option>';
       }
     }
     loadCourses();
     setToday();   // ตั้งวันที่เริ่มต้นเป็นวันนี้
+
+    // เปิด/ปิดกล่องเพิ่มหลักสูตรใหม่
+    function toggleAddCourseBox(show) {
+      const box = document.getElementById('addCourseBox');
+      box.style.display = show ? 'block' : 'none';
+      if (show) {
+        document.getElementById('newCourseName').value = '';
+        box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+
+    // ส่งเพิ่มหลักสูตรใหม่
+    async function submitAddCourse() {
+      const input = document.getElementById('newCourseName');
+      const name = input.value.trim();
+      if (!name) {
+        Swal.fire('กรุณากรอกชื่อหลักสูตร', '', 'warning');
+        return;
+      }
+      Swal.fire({ title: '⏳ กำลังเพิ่มหลักสูตร...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+      try {
+        await callApi('addCourse', { course: name });
+        toggleAddCourseBox(false);
+        await loadCourses(name);   // โหลดเมนูใหม่ พร้อมเลือกหลักสูตรที่เพิ่งเพิ่มให้เลย
+        Swal.fire('เพิ่มสำเร็จ ✅', 'เพิ่มหลักสูตร "' + name + '" เรียบร้อยแล้ว', 'success');
+      } catch (err) {
+        Swal.fire('เพิ่มไม่สำเร็จ', err.message, 'error');
+      }
+    }
 
     // เมื่อเลือกหลักสูตร → แสดงพิกัดเดิม + โหลดข้อมูล
     document.getElementById('courseSel').addEventListener('change', async function () {
