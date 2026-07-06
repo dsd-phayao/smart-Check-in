@@ -74,6 +74,13 @@
     .hint { font-size:.8rem; color:var(--mid); background:#eff6ff; border:1px solid #bfdbfe;
       border-radius:8px; padding:10px 12px; margin-bottom:16px; line-height:1.5; }
     .swal2-popup { font-family:'Sarabun',sans-serif !important; border-radius:18px !important; }
+
+    /* พิมพ์หลักฐาน: ซ่อนทุกอย่างบนจอ ยกเว้น #printArea ตอนสั่งพิมพ์ */
+    @media print {
+      body * { visibility: hidden; }
+      #printArea, #printArea * { visibility: visible; }
+      #printArea { display: block !important; position: absolute; left: 0; top: 0; width: 100%; padding: 20px; }
+    }
   </style>
 </head>
 <body>
@@ -146,6 +153,48 @@
 
       <div class="divider"></div>
 
+      <!-- ปุ่มเปิดกล่องพิมพ์หลักฐานการลงทะเบียน -->
+      <button type="button" class="btn-open-loc" onclick="toggleProofBox(true)" style="color:#7c3aed;background:#f5f3ff;border-color:#c4b5fd">🖨️ พิมพ์หลักฐานการลงทะเบียน</button>
+
+      <div id="proofBox" style="display:none;margin-top:12px;padding:16px;border:1.5px solid #c4b5fd;border-radius:10px;background:#f5f3ff">
+        <div style="font-weight:700;color:#7c3aed;margin-bottom:10px">ค้นหาหลักฐานการลงทะเบียน</div>
+
+        <div class="field">
+          <label class="label">เลือกหลักสูตร</label>
+          <select id="proofCourseSel">
+            <option value="" selected disabled>-- เลือกหลักสูตร --</option>
+          </select>
+        </div>
+
+        <div style="display:flex;gap:8px">
+          <div class="field" style="flex:1">
+            <label class="label">จากวันที่</label>
+            <input type="date" id="proofStartDate" class="app-input">
+          </div>
+          <div class="field" style="flex:1">
+            <label class="label">ถึงวันที่</label>
+            <input type="date" id="proofEndDate" class="app-input">
+          </div>
+        </div>
+        <div class="hint" style="background:#f5f3ff;border-color:#c4b5fd;margin-bottom:14px">
+          จะได้รายชื่อผู้ลงทะเบียนทั้งหมดของหลักสูตรนี้ในช่วงวันที่เลือก ตรงกับที่อยู่ใน Google Sheets เลือกวันเดียวกันทั้งสองช่องเพื่อดูวันเดียว หรือปล่อยว่างทั้งคู่เพื่อดึงข้อมูลทั้งหมด
+        </div>
+
+        <button type="button" onclick="searchProof()" style="width:100%;padding:12px;background:#7c3aed;color:#fff;border:none;border-radius:10px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;margin-bottom:10px">
+          🔍 ค้นหา
+        </button>
+
+        <div id="proofResultBox" style="display:none">
+          <div id="proofResultTable" style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;overflow-x:auto;margin-bottom:10px;font-size:.85rem;background:#fff"></div>
+          <div style="display:flex;gap:8px">
+            <button type="button" onclick="window.print()" style="flex:1;padding:12px;background:#16a34a;color:#fff;border:none;border-radius:10px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer">🖨️ พิมพ์หลักฐาน</button>
+            <button type="button" onclick="toggleProofBox(false)" style="flex:0 0 90px;padding:12px;background:#e2e8f0;color:#475569;border:none;border-radius:10px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer">ปิด</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
       <!-- ส่วนตรวจสอบ -->
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
         <span style="font-weight:700;color:#0f172a;font-size:1rem">ตรวจสอบการเช็กชื่อ</span>
@@ -197,6 +246,9 @@
       </div>
     </div>
   </div>
+
+  <!-- พื้นที่สำหรับพิมพ์เท่านั้น (ไม่แสดงบนหน้าจอปกติ แสดงเฉพาะตอนสั่งพิมพ์) -->
+  <div id="printArea" style="display:none"></div>
 
   <script>
     const API_URL = 'https://script.google.com/macros/s/AKfycbzBfoC-ZvdhgJ6aXaasbl9WblaM8gLs3cx22lSbZkE4Dmmeq7fZEu0GM-gX3eqClKVq/exec';
@@ -305,6 +357,136 @@
     /* ── เปิด/ปิดกล่องตั้งจุดฝึก ── */
     function toggleLocBox(show) {
       document.getElementById('locBox').style.display = show ? 'block' : 'none';
+    }
+
+    /* ══════════ พิมพ์หลักฐานการลงทะเบียน ══════════ */
+
+    async function loadProofCourses() {
+      const sel = document.getElementById('proofCourseSel');
+      try {
+        const courses = await callApi('getCourses', {});
+        sel.innerHTML = '<option value="" selected disabled>-- เลือกหลักสูตร --</option>';
+        (courses || []).forEach(c => {
+          const o = document.createElement('option');
+          o.value = c; o.textContent = c; sel.appendChild(o);
+        });
+      } catch (e) {
+        sel.innerHTML = '<option value="" selected disabled>-- โหลดไม่สำเร็จ --</option>';
+      }
+    }
+    loadProofCourses();
+
+    function toggleProofBox(show) {
+      document.getElementById('proofBox').style.display = show ? 'block' : 'none';
+      if (show) {
+        document.getElementById('proofResultBox').style.display = 'none';
+        document.getElementById('proofBox').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+
+    function toSheetDateFromInput(v) {
+      if (!v) return '';
+      const [y, m, d] = v.split('-');
+      return parseInt(d) + '/' + parseInt(m) + '/' + y;
+    }
+
+    async function searchProof() {
+      const course = document.getElementById('proofCourseSel').value;
+      const startDate = toSheetDateFromInput(document.getElementById('proofStartDate').value);
+      const endDate = toSheetDateFromInput(document.getElementById('proofEndDate').value);
+
+      if (!course) {
+        Swal.fire('กรุณาเลือกหลักสูตร', '', 'warning');
+        return;
+      }
+
+      Swal.fire({ title: '⏳ กำลังค้นหา...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+      try {
+        const r = await callApi('getAttendanceReport', { course, startDate, endDate });
+        Swal.close();
+        renderProofResult(r);
+      } catch (e) {
+        Swal.fire('ค้นหาไม่สำเร็จ', e.message, 'error');
+      }
+    }
+
+    function escapeHtml2(s) {
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function renderProofResult(r) {
+      const box = document.getElementById('proofResultTable');
+      const resultBox = document.getElementById('proofResultBox');
+      const printArea = document.getElementById('printArea');
+
+      if (!r.rows || r.rows.length === 0) {
+        box.innerHTML = '<div style="padding:16px;text-align:center;color:#94a3b8">ไม่พบข้อมูลการลงทะเบียนในช่วงที่เลือก</div>';
+        resultBox.style.display = 'block';
+        printArea.innerHTML = '';
+        return;
+      }
+
+      // ตารางแสดงตัวอย่างบนหน้าจอ (วันที่ + ชื่อ + 4 ช่วงเวลา)
+      let html = '<div style="display:flex;background:#f5f3ff;font-weight:700;padding:8px 10px;min-width:520px">'
+        + '<div style="width:90px">วันที่</div>'
+        + '<div style="flex:1">ชื่อ</div>'
+        + '<div style="width:64px;text-align:center;color:#16a34a">เข้าฝึก</div>'
+        + '<div style="width:64px;text-align:center;color:#d97706">พักเที่ยง</div>'
+        + '<div style="width:64px;text-align:center;color:#1a56c4">เข้าบ่าย</div>'
+        + '<div style="width:64px;text-align:center;color:#7c3aed">เลิกฝึก</div></div>';
+      r.rows.forEach((row, i) => {
+        const bg = i % 2 === 0 ? '#fff' : '#f8fafc';
+        const cell = v => '<div style="width:64px;text-align:center;color:' + (v ? '#0f172a' : '#cbd5e1') + '">' + (v || '–') + '</div>';
+        html += '<div style="display:flex;padding:8px 10px;background:' + bg + ';min-width:520px">'
+          + '<div style="width:90px">' + escapeHtml2(row.date) + '</div>'
+          + '<div style="flex:1">' + escapeHtml2(row.name) + '</div>'
+          + cell(row.morning) + cell(row.lunch) + cell(row.afternoon) + cell(row.evening) + '</div>';
+      });
+      box.innerHTML = html;
+      resultBox.style.display = 'block';
+
+      // สร้างเนื้อหาสำหรับพิมพ์เป็นเอกสารทางการ
+      const today = new Date();
+      const thMonths = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+      const printedStr = today.getDate() + ' ' + thMonths[today.getMonth()] + ' ' + (today.getFullYear() + 543);
+
+      let rowsHtml = '';
+      r.rows.forEach(row => {
+        rowsHtml += '<tr>'
+          + '<td style="border:1px solid #333;padding:6px 10px">' + escapeHtml2(row.date) + '</td>'
+          + '<td style="border:1px solid #333;padding:6px 10px">' + escapeHtml2(row.name) + '</td>'
+          + '<td style="border:1px solid #333;padding:6px 10px;text-align:center">' + (row.morning || '-') + '</td>'
+          + '<td style="border:1px solid #333;padding:6px 10px;text-align:center">' + (row.lunch || '-') + '</td>'
+          + '<td style="border:1px solid #333;padding:6px 10px;text-align:center">' + (row.afternoon || '-') + '</td>'
+          + '<td style="border:1px solid #333;padding:6px 10px;text-align:center">' + (row.evening || '-') + '</td>'
+          + '</tr>';
+      });
+
+      printArea.innerHTML =
+        '<div style="font-family:\'Sarabun\',sans-serif;color:#111">'
+        + '<div style="text-align:center;margin-bottom:18px">'
+        + '<div style="font-size:1.25rem;font-weight:700">หลักฐานการลงทะเบียนเข้าฝึกอบรม</div>'
+        + '<div style="font-size:.95rem;color:#444">สำนักงานพัฒนาฝีมือแรงงานพะเยา</div>'
+        + '</div>'
+        + '<div style="margin-bottom:14px;font-size:1rem;line-height:1.8">'
+        + '<div><b>หลักสูตร:</b> ' + escapeHtml2(r.course) + '</div>'
+        + '<div><b>จำนวนผู้ลงทะเบียนทั้งหมด:</b> ' + r.totalPeople + ' คน (' + r.totalRecords + ' รายการ ลงครบทั้ง 4 ช่วง ' + r.completeRecords + ' รายการ)</div>'
+        + '</div>'
+        + '<table style="width:100%;border-collapse:collapse;font-size:.9rem;margin-bottom:40px">'
+        + '<thead><tr style="background:#eee">'
+        + '<th style="border:1px solid #333;padding:6px 10px">วันที่</th>'
+        + '<th style="border:1px solid #333;padding:6px 10px">ชื่อ</th>'
+        + '<th style="border:1px solid #333;padding:6px 10px">เข้าฝึก</th>'
+        + '<th style="border:1px solid #333;padding:6px 10px">พักเที่ยง</th>'
+        + '<th style="border:1px solid #333;padding:6px 10px">เข้าบ่าย</th>'
+        + '<th style="border:1px solid #333;padding:6px 10px">เลิกฝึก</th>'
+        + '</tr></thead><tbody>' + rowsHtml + '</tbody></table>'
+        + '<div style="display:flex;justify-content:flex-end;font-size:.95rem">'
+        + '<div style="text-align:center">'
+        + '<div>ลงชื่อ .................................................. ผู้รับรอง</div>'
+        + '<div style="margin-top:8px">( .................................................. )</div>'
+        + '<div style="margin-top:14px">วันที่พิมพ์เอกสาร ' + printedStr + '</div>'
+        + '</div></div></div>';
     }
 
     let lastList = [];   // เก็บข้อมูลล่าสุดไว้ใช้กับ renderMissing
