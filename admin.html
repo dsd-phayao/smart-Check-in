@@ -118,6 +118,28 @@
         </select>
       </div>
 
+      <!-- ปุ่มเปิดกล่องเพิ่มรายชื่อผู้เข้าฝึก -->
+      <button type="button" class="btn-open-loc" onclick="toggleAddNamesBox(true)" style="color:#1a56c4;background:#eff6ff;border-color:#93c5fd;margin-bottom:12px">👥 เพิ่มรายชื่อผู้เข้าฝึก</button>
+
+      <!-- กล่องเพิ่มรายชื่อผู้เข้าฝึก (ซ่อนไว้ตอนแรก) -->
+      <div id="addNamesBox" style="display:none;margin-bottom:16px;padding:16px;border:1.5px solid #93c5fd;border-radius:10px;background:#eff6ff">
+        <div style="font-weight:700;color:#1a56c4;margin-bottom:10px">เพิ่มรายชื่อผู้เข้าฝึก</div>
+        <div class="hint" style="background:#eff6ff;border-color:#93c5fd;margin-bottom:12px">
+          พิมพ์ชื่อ-นามสกุล 1 คนต่อ 1 บรรทัด เพิ่มได้พร้อมกันหลายคนในครั้งเดียว จะถูกเพิ่มเข้าหลักสูตรที่เลือกไว้ด้านบน
+        </div>
+        <textarea id="bulkNames" class="app-input" placeholder="นายสมชาย ใจดี&#10;นางสาวสมหญิง รักเรียน&#10;..." style="width:100%;height:130px;resize:vertical;margin-bottom:10px"></textarea>
+        <div style="display:flex;gap:8px">
+          <button type="button" onclick="submitAddTrainees()"
+                  style="flex:1;padding:12px;background:#1a56c4;color:#fff;border:none;border-radius:10px;font-family:'Sarabun',sans-serif;font-size:.95rem;font-weight:700;cursor:pointer">
+            👥 เพิ่มรายชื่อ
+          </button>
+          <button type="button" onclick="toggleAddNamesBox(false)"
+                  style="flex:0 0 90px;padding:12px;background:#e2e8f0;color:#475569;border:none;border-radius:10px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer">
+            ยกเลิก
+          </button>
+        </div>
+      </div>
+
       <!-- ปุ่มเปิดกล่องตั้งจุดฝึก -->
       <button type="button" class="btn-open-loc" onclick="toggleLocBox(true)">📍 ตั้งจุดฝึกอบรม</button>
 
@@ -328,6 +350,49 @@
         toggleAddCourseBox(false);
         await loadCourses(name);   // โหลดเมนูใหม่ พร้อมเลือกหลักสูตรที่เพิ่งเพิ่มให้เลย
         Swal.fire('เพิ่มสำเร็จ ✅', 'เพิ่มหลักสูตร "' + name + '" เรียบร้อยแล้ว', 'success');
+      } catch (err) {
+        Swal.fire('เพิ่มไม่สำเร็จ', err.message, 'error');
+      }
+    }
+
+    // เปิด/ปิดกล่องเพิ่มรายชื่อผู้เข้าฝึก (ต้องเลือกหลักสูตรก่อน)
+    function toggleAddNamesBox(show) {
+      const box = document.getElementById('addNamesBox');
+      if (show) {
+        const course = document.getElementById('courseSel').value;
+        if (!course) {
+          Swal.fire('กรุณาเลือกหลักสูตรก่อน', 'เลือกหลักสูตรจากเมนูด้านบนก่อนเพิ่มรายชื่อ', 'warning');
+          return;
+        }
+        document.getElementById('bulkNames').value = '';
+        box.style.display = 'block';
+        box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } else {
+        box.style.display = 'none';
+      }
+    }
+
+    // ส่งเพิ่มรายชื่อผู้เข้าฝึกหลายคนพร้อมกัน
+    async function submitAddTrainees() {
+      const course = document.getElementById('courseSel').value;
+      const namesText = document.getElementById('bulkNames').value;
+
+      if (!course) {
+        Swal.fire('กรุณาเลือกหลักสูตร', '', 'warning');
+        return;
+      }
+      if (!namesText.trim()) {
+        Swal.fire('กรุณากรอกรายชื่อ', 'พิมพ์ชื่ออย่างน้อย 1 คน (1 คนต่อ 1 บรรทัด)', 'warning');
+        return;
+      }
+
+      Swal.fire({ title: '⏳ กำลังเพิ่มรายชื่อ...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+      try {
+        const r = await callApi('addTrainees', { course: course, names: namesText });
+        toggleAddNamesBox(false);
+        let msg = 'เพิ่มรายชื่อสำเร็จ ' + r.added + ' คน';
+        if (r.skipped > 0) msg += ' (ข้าม ' + r.skipped + ' คนที่มีอยู่แล้วหรือซ้ำกัน)';
+        Swal.fire('สำเร็จ ✅', msg, 'success');
       } catch (err) {
         Swal.fire('เพิ่มไม่สำเร็จ', err.message, 'error');
       }
@@ -618,6 +683,7 @@
         );
       }});
     }
+
     // บันทึกจุดฝึก
     async function saveLocation() {
       const course = document.getElementById('courseSel').value;
