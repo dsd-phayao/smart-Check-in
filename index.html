@@ -61,8 +61,18 @@
 
     .locked-msg { display:none; margin-top:6px; padding:6px 10px; font-size:.85rem; color:var(--green);
       background:#f0fdf4; border:1px solid #86efac; border-radius:8px; }
-    .name-warn { display:none; margin-top:6px; padding:6px 10px; font-size:.85rem; color:#dc2626;
-      background:#fef2f2; border:1px solid #fca5a5; border-radius:8px; }
+
+    /* กล่องดรอปดาวน์ชื่อ (custom combobox) */
+    .combo-wrap { position:relative; }
+    .combo-list { display:none; position:absolute; z-index:50; top:calc(100% + 6px); left:0; right:0;
+      max-height:230px; overflow-y:auto; background:var(--white); border:1.5px solid var(--border);
+      border-radius:var(--radius-sm); box-shadow:0 10px 28px rgba(10,45,110,.16); }
+    .combo-list.open { display:block; }
+    .combo-item { padding:12px 14px; font-size:.92rem; color:var(--text-dark); cursor:pointer;
+      border-bottom:1px solid #f1f5f9; }
+    .combo-item:last-child { border-bottom:none; }
+    .combo-item:hover, .combo-item.active { background:#eff6ff; }
+    .combo-empty { padding:12px 14px; font-size:.88rem; color:var(--text-light); }
 
     .location-card { overflow:hidden; border:1.5px solid var(--border); border-radius:var(--radius-sm); }
     .location-card-inner { display:flex; flex-direction:column; gap:8px; padding:12px 14px; background:#f8fafc; }
@@ -119,11 +129,12 @@
 
         <div class="field-group">
           <div class="field-label"><div class="field-icon">👤</div> ชื่อ-นามสกุล</div>
-          <input type="text" class="app-input" id="name" list="nameList"
-                 placeholder="กรุณาเลือกหลักสูตรด้านบนก่อน..." required disabled>
-          <datalist id="nameList"></datalist>
+          <div class="combo-wrap" id="nameComboWrap">
+            <input type="text" class="app-input" id="name" autocomplete="off"
+                   placeholder="กรุณาเลือกหลักสูตรด้านบนก่อน..." required disabled>
+            <div class="combo-list" id="nameDropdownList"></div>
+          </div>
           <div class="locked-msg" id="lockedMsg">🔒 บัญชี LINE นี้ผูกกับชื่อของคุณแล้ว</div>
-          <div class="name-warn" id="nameWarn">⚠️ ไม่พบชื่อนี้ในหลักสูตร กรุณาเลือกจากรายการ หรือติดต่อแอดมินให้เพิ่มชื่อของคุณก่อน</div>
         </div>
 
         <div class="field-group">
@@ -271,6 +282,7 @@
       nameInput.value = '';
       nameInput.disabled = true;
       nameInput.placeholder = 'กำลังดึงรายชื่อ...';
+      closeNameDropdown();
       resetTimeTypeBox();
 
       if (courseType) {
@@ -279,10 +291,10 @@
           const names = await callApi('getNamesByCourse', { courseType });
           fillNameList(names);
           nameInput.disabled = false;
-          nameInput.placeholder = 'พิมพ์ชื่อที่แอดมินเพิ่มไว้ให้...';
+          nameInput.placeholder = 'พิมพ์ชื่อของคุณ...';
         } catch (e) {
           nameInput.disabled = false;
-          nameInput.placeholder = 'พิมพ์ชื่อที่แอดมินเพิ่มไว้ให้...';
+          nameInput.placeholder = 'พิมพ์ชื่อของคุณ...';
         }
       }
     }
@@ -297,38 +309,57 @@
     }
 
     let allNames = [];
+    const NAME_MIN_CHARS = 9;   // ต้องพิมพ์อย่างน้อยกี่ตัวอักษรก่อนจะแสดงรายชื่อ (กันไม่ให้เห็นชื่อคนอื่นทั้งหมดตั้งแต่แตะช่อง)
+
     function fillNameList(names) {
       allNames = names || [];
-      document.getElementById('nameList').innerHTML = '';
+      renderNameDropdown('');
     }
-    function filterNameList(keyword) {
-      const nameList = document.getElementById('nameList');
-      nameList.innerHTML = '';
+
+    // แสดงรายชื่อในกล่องดรอปดาวน์ที่กำหนดเอง (แทนที่ datalist ของเบราว์เซอร์ ซึ่งแสดงผลไม่แน่นอนบนมือถือ)
+    function renderNameDropdown(keyword) {
+      const listEl = document.getElementById('nameDropdownList');
       const kw = String(keyword || '').trim();
-      if (kw.length < 9) return;
-      allNames.filter(name => String(name).includes(kw)).forEach(name => {
-        const option = document.createElement('option');
-        option.value = name; nameList.appendChild(option);
+
+      if (kw.length < NAME_MIN_CHARS) {
+        listEl.innerHTML = '<div class="combo-empty">พิมพ์ชื่อของคุณ</div>';
+        return;
+      }
+
+      const matches = allNames.filter(n => String(n).includes(kw));
+      listEl.innerHTML = '';
+      if (matches.length === 0) {
+        listEl.innerHTML = '<div class="combo-empty">ไม่พบชื่อที่ตรงกัน กรุณาติดต่อแอดมิน</div>';
+        return;
+      }
+      matches.slice(0, 50).forEach(n => {
+        const item = document.createElement('div');
+        item.className = 'combo-item';
+        item.textContent = n;
+        // ใช้ mousedown/touchstart แทน click เพื่อให้ทำงานก่อน blur ของ input
+        item.addEventListener('mousedown', function (e) { e.preventDefault(); selectName(n); });
+        listEl.appendChild(item);
       });
     }
+
+    function selectName(name) {
+      const nameInput = document.getElementById('name');
+      nameInput.value = name;   // ค่าที่ตรงกับรายชื่อในหลักสูตร 100% เพราะเลือกจากลิสต์โดยตรง
+      closeNameDropdown();
+      triggerTimeCheck();
+    }
+
+    function openNameDropdown() { document.getElementById('nameDropdownList').classList.add('open'); }
+    function closeNameDropdown() { document.getElementById('nameDropdownList').classList.remove('open'); }
+
+    document.addEventListener('click', function (e) {
+      const wrap = document.getElementById('nameComboWrap');
+      if (wrap && !wrap.contains(e.target)) closeNameDropdown();
+    });
 
     // ต้องเป็นชื่อที่แอดมินเพิ่มไว้ในหลักสูตรนี้เท่านั้น (ตรงเป๊ะ ไม่ใช่แค่คล้ายกัน) ผู้เข้าฝึกเพิ่มชื่อเองไม่ได้
     function isNameValid(name) {
       return allNames.indexOf(String(name || '').trim()) !== -1;
-    }
-
-    function updateNameWarn() {
-      const nameInput = document.getElementById('name');
-      const warnEl = document.getElementById('nameWarn');
-      const lockedMsg = document.getElementById('lockedMsg');
-      if (lockedMsg.style.display === 'block') { warnEl.style.display = 'none'; return; }
-
-      const val = nameInput.value.trim();
-      if (val.length >= 9 && !isNameValid(val)) {
-        warnEl.style.display = 'block';
-      } else {
-        warnEl.style.display = 'none';
-      }
     }
 
     function resetTimeTypeBox() {
@@ -376,20 +407,24 @@
     function triggerTimeCheck() {
       const name = document.getElementById('name').value.trim();
       const course = document.getElementById('courseType').value;
-      updateNameWarn();
       if (!name || !course) return;
       if (!isNameValid(name)) { resetTimeTypeBox(); return; }   // ยังไม่ใช่ชื่อที่ถูกต้อง ไม่ต้องเช็คสถานะ
       checkTimeType(name, course);
     }
     const nameEl = document.getElementById('name');
-    nameEl.addEventListener('change', triggerTimeCheck);
+    nameEl.addEventListener('focus', function () {
+      if (!this.disabled) { renderNameDropdown(this.value); openNameDropdown(); }
+    });
     nameEl.addEventListener('input', function () {
-      filterNameList(this.value);
-      updateNameWarn();
+      renderNameDropdown(this.value);
+      openNameDropdown();
       clearTimeout(nameCheckTimer);
       nameCheckTimer = setTimeout(triggerTimeCheck, 600);
     });
-    nameEl.addEventListener('blur', triggerTimeCheck);
+    nameEl.addEventListener('blur', function () {
+      setTimeout(closeNameDropdown, 150);   // หน่วงเวลาให้คลิกเลือกรายชื่อในลิสต์ทำงานก่อน blur
+      triggerTimeCheck();
+    });
 
     function getLocation() {
       if (!navigator.geolocation) {
