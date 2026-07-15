@@ -404,11 +404,21 @@
       const curEl = document.getElementById('curLoc');
       curEl.textContent = 'กำลังโหลด...';
       curEl.classList.remove('empty');
+
+      // สำคัญ: ล้างพิกัดที่จับไว้ก่อนหน้า ทุกครั้งที่เปลี่ยนหลักสูตร
+      // กันไม่ให้เผลอบันทึกพิกัดของหลักสูตรก่อนหน้าซ้ำเข้าหลักสูตรใหม่โดยไม่ได้จับพิกัดสดใหม่
+      gotLat = '';
+      gotLng = '';
+      const gotLocEl = document.getElementById('gotLoc');
+      gotLocEl.textContent = 'ยังไม่ได้จับพิกัด';
+      gotLocEl.classList.add('empty');
+
       try {
         const loc = await callApi('getCourseLocation', { course });
         if (loc.isDefault) {
           curEl.textContent = 'ยังไม่ได้ตั้ง (ใช้ค่าเริ่มต้น)';
           curEl.classList.add('empty');
+          document.getElementById('radiusInput').value = 93;   // รีเซ็ตรัศมีกลับค่าเริ่มต้น ไม่ให้ค้างจากหลักสูตรก่อนหน้า
         } else {
           curEl.textContent = loc.lat.toFixed(6) + ', ' + loc.lng.toFixed(6) + ' (รัศมี ' + loc.radius + 'ม.)';
           document.getElementById('radiusInput').value = loc.radius;
@@ -422,6 +432,14 @@
     /* ── เปิด/ปิดกล่องตั้งจุดฝึก ── */
     function toggleLocBox(show) {
       document.getElementById('locBox').style.display = show ? 'block' : 'none';
+      if (show) {
+        // เผื่อกรณีเปิดกล่องซ้ำโดยไม่ได้เปลี่ยนหลักสูตร ก็ยังบังคับให้จับพิกัดใหม่เสมอ
+        gotLat = '';
+        gotLng = '';
+        const gotLocEl = document.getElementById('gotLoc');
+        gotLocEl.textContent = 'ยังไม่ได้จับพิกัด';
+        gotLocEl.classList.add('empty');
+      }
     }
 
     /* ══════════ พิมพ์หลักฐานการลงทะเบียน ══════════ */

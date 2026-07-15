@@ -61,6 +61,8 @@
 
     .locked-msg { display:none; margin-top:6px; padding:6px 10px; font-size:.85rem; color:var(--green);
       background:#f0fdf4; border:1px solid #86efac; border-radius:8px; }
+    .name-warn { display:none; margin-top:6px; padding:6px 10px; font-size:.85rem; color:#dc2626;
+      background:#fef2f2; border:1px solid #fca5a5; border-radius:8px; }
 
     .location-card { overflow:hidden; border:1.5px solid var(--border); border-radius:var(--radius-sm); }
     .location-card-inner { display:flex; flex-direction:column; gap:8px; padding:12px 14px; background:#f8fafc; }
@@ -121,6 +123,7 @@
                  placeholder="กรุณาเลือกหลักสูตรด้านบนก่อน..." required disabled>
           <datalist id="nameList"></datalist>
           <div class="locked-msg" id="lockedMsg">🔒 บัญชี LINE นี้ผูกกับชื่อของคุณแล้ว</div>
+          <div class="name-warn" id="nameWarn">⚠️ ไม่พบชื่อนี้ในหลักสูตร กรุณาเลือกจากรายการ หรือติดต่อแอดมินให้เพิ่มชื่อของคุณก่อน</div>
         </div>
 
         <div class="field-group">
@@ -276,10 +279,10 @@
           const names = await callApi('getNamesByCourse', { courseType });
           fillNameList(names);
           nameInput.disabled = false;
-          nameInput.placeholder = 'พิมพ์ชื่อ-นามสกุลของคุณ...';
+          nameInput.placeholder = 'พิมพ์ชื่อที่แอดมินเพิ่มไว้ให้...';
         } catch (e) {
           nameInput.disabled = false;
-          nameInput.placeholder = 'พิมพ์ชื่อ-นามสกุลของคุณ...';
+          nameInput.placeholder = 'พิมพ์ชื่อที่แอดมินเพิ่มไว้ให้...';
         }
       }
     }
@@ -302,11 +305,30 @@
       const nameList = document.getElementById('nameList');
       nameList.innerHTML = '';
       const kw = String(keyword || '').trim();
-      if (kw.length < 3) return;
+      if (kw.length < 9) return;
       allNames.filter(name => String(name).includes(kw)).forEach(name => {
         const option = document.createElement('option');
         option.value = name; nameList.appendChild(option);
       });
+    }
+
+    // ต้องเป็นชื่อที่แอดมินเพิ่มไว้ในหลักสูตรนี้เท่านั้น (ตรงเป๊ะ ไม่ใช่แค่คล้ายกัน) ผู้เข้าฝึกเพิ่มชื่อเองไม่ได้
+    function isNameValid(name) {
+      return allNames.indexOf(String(name || '').trim()) !== -1;
+    }
+
+    function updateNameWarn() {
+      const nameInput = document.getElementById('name');
+      const warnEl = document.getElementById('nameWarn');
+      const lockedMsg = document.getElementById('lockedMsg');
+      if (lockedMsg.style.display === 'block') { warnEl.style.display = 'none'; return; }
+
+      const val = nameInput.value.trim();
+      if (val.length >= 9 && !isNameValid(val)) {
+        warnEl.style.display = 'block';
+      } else {
+        warnEl.style.display = 'none';
+      }
     }
 
     function resetTimeTypeBox() {
@@ -354,13 +376,16 @@
     function triggerTimeCheck() {
       const name = document.getElementById('name').value.trim();
       const course = document.getElementById('courseType').value;
+      updateNameWarn();
       if (!name || !course) return;
+      if (!isNameValid(name)) { resetTimeTypeBox(); return; }   // ยังไม่ใช่ชื่อที่ถูกต้อง ไม่ต้องเช็คสถานะ
       checkTimeType(name, course);
     }
     const nameEl = document.getElementById('name');
     nameEl.addEventListener('change', triggerTimeCheck);
     nameEl.addEventListener('input', function () {
       filterNameList(this.value);
+      updateNameWarn();
       clearTimeout(nameCheckTimer);
       nameCheckTimer = setTimeout(triggerTimeCheck, 600);
     });
@@ -437,6 +462,12 @@
       const lngInput = document.getElementById('longitude').value;
 
       if (!name || !courseType) { Swal.fire('ผิดพลาด', 'กรุณาเลือกหลักสูตรและชื่อ', 'error'); return; }
+
+      const lockedMsgEl = document.getElementById('lockedMsg');
+      if (lockedMsgEl.style.display !== 'block' && !isNameValid(name)) {
+        Swal.fire('ไม่พบชื่อนี้', 'กรุณาเลือกชื่อจากรายการที่ขึ้นให้ หรือติดต่อแอดมินให้เพิ่มชื่อของคุณก่อนลงทะเบียน', 'error');
+        return;
+      }
 
       if (!timeType) {
         try {
