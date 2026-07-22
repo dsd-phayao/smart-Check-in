@@ -201,9 +201,10 @@
     const LIFF_ID = '2010291124-cuelzcch';
     const API_URL = 'https://script.google.com/macros/s/AKfycbw7t4jf-tYLZSC1OCZPP0TG5kxQ-zaRXVYdIozyX2SkAmFU7SGwzUT5YQaFeoQdE8tP/exec';
 
-    let TARGET_LAT = 19.06117421820639;
-    let TARGET_LNG = 99.92800924500672;
+    let TARGET_LAT = null;
+    let TARGET_LNG = null;
     let MAX_DIST   = 93;
+    let courseLocationReady = false;   // true ก็ต่อเมื่อหลักสูตรที่เลือกมีการตั้งพิกัดจุดฝึกจริงแล้วเท่านั้น
 
     let lineUserId = '';
     let lineDisplayName = '';
@@ -304,8 +305,17 @@
         const loc = await callApi('getCourseLocation', { course: courseType });
         if (loc && loc.lat && loc.lng) {
           TARGET_LAT = loc.lat; TARGET_LNG = loc.lng; MAX_DIST = loc.radius || 93;
+          courseLocationReady = true;
+        } else {
+          // หลักสูตรนี้ยังไม่ได้ตั้งพิกัดจุดฝึก ห้ามใช้พิกัดของหลักสูตรอื่นหรือค่าเริ่มต้นใดๆ ทั้งสิ้น
+          TARGET_LAT = null; TARGET_LNG = null;
+          courseLocationReady = false;
         }
-      } catch (e) { console.warn('โหลดพิกัดหลักสูตรไม่สำเร็จ:', e); }
+      } catch (e) {
+        console.warn('โหลดพิกัดหลักสูตรไม่สำเร็จ:', e);
+        TARGET_LAT = null; TARGET_LNG = null;
+        courseLocationReady = false;
+      }
     }
 
     let allNames = [];
@@ -370,7 +380,9 @@
     }
 
     /* ตรวจสถานะ 4 ช่วง: เข้าฝึก / พักเที่ยง / เข้าบ่าย / เลิกฝึก */
+    let timeTypeCheckSeq = 0;   // กันปัญหาผลลัพธ์เก่ามาถึงทีหลังแล้วทับผลลัพธ์ใหม่กว่า (คำขอที่ยิงทีหลังต้องชนะเสมอ)
     async function checkTimeType(name, course) {
+      const mySeq = ++timeTypeCheckSeq;
       const box = document.getElementById('timeTypeDisplay');
       const hidden = document.getElementById('timeType');
       box.className = 'timetype-box';
@@ -379,6 +391,7 @@
 
       try {
         const type = await callApi('checkAttendanceType', { name, course });
+        if (mySeq !== timeTypeCheckSeq) return;   // มีการตรวจสอบใหม่กว่าเริ่มไปแล้ว ทิ้งผลลัพธ์เก่านี้
         hidden.value = type;
         box.classList.remove('morning', 'lunch', 'afternoon', 'evening', 'full');
 
@@ -399,6 +412,7 @@
           box.textContent = '⚠️ ลงทะเบียนครบทั้ง 4 ช่วงแล้ววันนี้';
         }
       } catch (e) {
+        if (mySeq !== timeTypeCheckSeq) return;
         box.textContent = 'ตรวจสอบไม่สำเร็จ';
       }
     }
@@ -427,6 +441,10 @@
     });
 
     function getLocation() {
+      if (!courseLocationReady) {
+        Swal.fire({ icon:'warning', title:'ยังไม่ได้ตั้งจุดฝึก', html:'หลักสูตรนี้ยังไม่ได้ตั้งพิกัดจุดฝึก<br>กรุณาแจ้งแอดมินให้ตั้งพิกัดก่อน จึงจะลงทะเบียนได้' });
+        return;
+      }
       if (!navigator.geolocation) {
         Swal.fire({ icon:'error', title:'ไม่รองรับ GPS', html:'กรุณาใช้ <b>Chrome</b> หรือ <b>Safari</b> เวอร์ชันล่าสุด' });
         return;
@@ -491,12 +509,15 @@
         return;
       }
       const name = document.getElementById('name').value;
-      let timeType = document.getElementById('timeType').value;
       const courseType = document.getElementById('courseType').value;
       const latInput = document.getElementById('latitude').value;
       const lngInput = document.getElementById('longitude').value;
 
       if (!name || !courseType) { Swal.fire('ผิดพลาด', 'กรุณาเลือกหลักสูตรและชื่อ', 'error'); return; }
+      if (!courseLocationReady) {
+        Swal.fire({ icon:'warning', title:'ยังไม่ได้ตั้งจุดฝึก', html:'หลักสูตรนี้ยังไม่ได้ตั้งพิกัดจุดฝึก<br>กรุณาแจ้งแอดมินให้ตั้งพิกัดก่อน จึงจะลงทะเบียนได้' });
+        return;
+      }
 
       const lockedMsgEl = document.getElementById('lockedMsg');
       if (lockedMsgEl.style.display !== 'block' && !isNameValid(name)) {
@@ -504,13 +525,14 @@
         return;
       }
 
-      if (!timeType) {
-        try {
-          timeType = await callApi('checkAttendanceType', { name, course: courseType });
-          document.getElementById('timeType').value = timeType;
-        } catch (err) {
-          Swal.fire('ผิดพลาด', 'ตรวจสอบสถานะไม่สำเร็จ กรุณาลองใหม่', 'error'); return;
-        }
+      // สำคัญ: ตรวจสอบสถานะสดใหม่ทุกครั้งก่อนบันทึกจริง ห้ามใช้ค่าที่ค้างอยู่ในช่อง timeType
+      // (ค่าที่ค้างอาจไม่ตรงกับความจริง หากมีการตรวจสอบซ้อนกันหลายครั้งก่อนหน้า)
+      let timeType;
+      try {
+        timeType = await callApi('checkAttendanceType', { name, course: courseType });
+        document.getElementById('timeType').value = timeType;
+      } catch (err) {
+        Swal.fire('ผิดพลาด', 'ตรวจสอบสถานะไม่สำเร็จ กรุณาลองใหม่', 'error'); return;
       }
 
       if (timeType === 'ลงทะเบียนครบแล้ว') {
@@ -527,11 +549,13 @@
 
       Swal.fire({ title:'⏳ กำลังบันทึก...', allowOutsideClick:false, didOpen:()=>Swal.showLoading() });
       try {
-        await callApi('saveData', {
+        const saveResult = await callApi('saveData', {
           type: timeType, name: name, courseType: courseType,
           latitude: lat, longitude: lng, lineUserId: lineUserId, displayName: lineDisplayName
         });
-        Swal.fire('สำเร็จ ✅', `บันทึก "${timeType}" เรียบร้อยแล้ว`, 'success').then(() => {
+        // เซิร์ฟเวอร์เป็นผู้ตัดสินใจประเภทที่แท้จริงที่บันทึกไป ใช้ค่านั้นแสดงผลเสมอ (กันกรณีค่าฝั่งเว็บคลาดเคลื่อน)
+        const savedType = (saveResult && saveResult.type) || timeType;
+        Swal.fire('สำเร็จ ✅', `บันทึก "${savedType}" เรียบร้อยแล้ว`, 'success').then(() => {
           document.getElementById('yourLocation').textContent = 'ยังไม่ได้ตรวจสอบ';
           document.getElementById('yourLocation').classList.add('empty');
           document.getElementById('distance').textContent = 'ยังไม่ได้ตรวจสอบ';
