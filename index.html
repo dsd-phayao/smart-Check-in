@@ -210,6 +210,9 @@
     let lineDisplayName = '';
     let liffReady = false;
 
+    // ★ กันการกดปุ่มบันทึกซ้ำ/ส่งข้อมูลซ้ำระหว่างกำลังบันทึกอยู่ (double submit guard)
+    let isSaving = false;
+
     async function callApi(action, payload) {
       const res = await fetch(API_URL, {
         method: 'POST',
@@ -276,7 +279,14 @@
 
       if (lockedMsg.style.display === 'block') {
         const lockedName = nameInput.value;
-        if (courseType && lockedName) checkTimeType(lockedName, courseType);
+        if (courseType) {
+          // ★ สำคัญ: ต้องโหลดพิกัดจุดฝึกของหลักสูตรด้วย แม้ผู้ใช้จะถูกล็อกชื่อแล้วก็ตาม
+          // เดิมโค้ดนี้ return ออกไปก่อนโดยไม่เคยเรียก loadCourseLocation() เลย
+          // ทำให้ courseLocationReady ค้างเป็น false เสมอสำหรับผู้ใช้ที่เคยลงทะเบียนสำเร็จมาแล้ว
+          // (ชื่อถูกล็อก) ทั้งที่หลักสูตรตั้งพิกัดไว้แล้วจริง เกิด error "ยังไม่ได้ตั้งจุดฝึก" ผิดพลาด
+          loadCourseLocation(courseType);
+          if (lockedName) checkTimeType(lockedName, courseType);
+        }
         return;
       }
 
@@ -300,9 +310,14 @@
       }
     }
 
+    // ★ กันปัญหาผลลัพธ์เก่ามาถึงทีหลังแล้วทับผลลัพธ์ใหม่กว่า เช่นเดียวกับ timeTypeCheckSeq
+    // (ป้องกันกรณีผู้ใช้สลับหลักสูตรเร็วๆ แล้วคำขอของหลักสูตรเก่าตอบกลับช้ากว่าคำขอของหลักสูตรใหม่)
+    let courseLocationCheckSeq = 0;
     async function loadCourseLocation(courseType) {
+      const mySeq = ++courseLocationCheckSeq;
       try {
         const loc = await callApi('getCourseLocation', { course: courseType });
+        if (mySeq !== courseLocationCheckSeq) return;   // มีการเลือกหลักสูตรใหม่กว่าไปแล้ว ทิ้งผลลัพธ์เก่านี้
         if (loc && loc.lat && loc.lng) {
           TARGET_LAT = loc.lat; TARGET_LNG = loc.lng; MAX_DIST = loc.radius || 93;
           courseLocationReady = true;
@@ -312,6 +327,7 @@
           courseLocationReady = false;
         }
       } catch (e) {
+        if (mySeq !== courseLocationCheckSeq) return;
         console.warn('โหลดพิกัดหลักสูตรไม่สำเร็จ:', e);
         TARGET_LAT = null; TARGET_LNG = null;
         courseLocationReady = false;
@@ -504,78 +520,92 @@
 
     document.getElementById('locationForm').addEventListener('submit', async function (e) {
       e.preventDefault();
-      if (!liffReady || !lineUserId) {
-        Swal.fire('ยังไม่พร้อม', 'ยังดึงข้อมูล LINE ไม่สำเร็จ กรุณาปิดแล้วเปิดลิงก์ใหม่ในแอป LINE', 'warning');
-        return;
-      }
-      const name = document.getElementById('name').value;
-      const courseType = document.getElementById('courseType').value;
-      const latInput = document.getElementById('latitude').value;
-      const lngInput = document.getElementById('longitude').value;
 
-      if (!name || !courseType) { Swal.fire('ผิดพลาด', 'กรุณาเลือกหลักสูตรและชื่อ', 'error'); return; }
-      if (!courseLocationReady) {
-        Swal.fire({ icon:'warning', title:'ยังไม่ได้ตั้งจุดฝึก', html:'หลักสูตรนี้ยังไม่ได้ตั้งพิกัดจุดฝึก<br>กรุณาแจ้งแอดมินให้ตั้งพิกัดก่อน จึงจะลงทะเบียนได้' });
-        return;
-      }
+      // ★★★ กันกดปุ่มบันทึกซ้ำ/ส่งข้อมูลซ้ำระหว่างกำลังบันทึกอยู่ (double submit guard) ★★★
+      // ถ้ากำลังอยู่ระหว่างบันทึกครั้งก่อนหน้ายังไม่เสร็จ ไม่ต้องทำอะไรซ้ำอีก
+      if (isSaving) return;
+      isSaving = true;
+      const saveBtn = document.getElementById('saveBtn');
+      saveBtn.disabled = true;
 
-      const lockedMsgEl = document.getElementById('lockedMsg');
-      if (lockedMsgEl.style.display !== 'block' && !isNameValid(name)) {
-        Swal.fire('ไม่พบชื่อนี้', 'กรุณาเลือกชื่อจากรายการที่ขึ้นให้ หรือติดต่อแอดมินให้เพิ่มชื่อของคุณก่อนลงทะเบียน', 'error');
-        return;
-      }
-
-      // สำคัญ: ตรวจสอบสถานะสดใหม่ทุกครั้งก่อนบันทึกจริง ห้ามใช้ค่าที่ค้างอยู่ในช่อง timeType
-      // (ค่าที่ค้างอาจไม่ตรงกับความจริง หากมีการตรวจสอบซ้อนกันหลายครั้งก่อนหน้า)
-      let timeType;
       try {
-        timeType = await callApi('checkAttendanceType', { name, course: courseType });
-        document.getElementById('timeType').value = timeType;
-      } catch (err) {
-        Swal.fire('ผิดพลาด', 'ตรวจสอบสถานะไม่สำเร็จ กรุณาลองใหม่', 'error'); return;
-      }
+        if (!liffReady || !lineUserId) {
+          Swal.fire('ยังไม่พร้อม', 'ยังดึงข้อมูล LINE ไม่สำเร็จ กรุณาปิดแล้วเปิดลิงก์ใหม่ในแอป LINE', 'warning');
+          return;
+        }
+        const name = document.getElementById('name').value;
+        const courseType = document.getElementById('courseType').value;
+        const latInput = document.getElementById('latitude').value;
+        const lngInput = document.getElementById('longitude').value;
 
-      if (timeType === 'ลงทะเบียนครบแล้ว') {
-        Swal.fire('ไม่สามารถบันทึกได้', 'คุณลงทะเบียนครบทั้ง 4 ช่วงแล้ววันนี้', 'warning'); return;
-      }
-      if (!latInput || !lngInput) { Swal.fire('ผิดพลาด', 'กรุณาตรวจสอบตำแหน่งก่อนบันทึก', 'error'); return; }
+        if (!name || !courseType) { Swal.fire('ผิดพลาด', 'กรุณาเลือกหลักสูตรและชื่อ', 'error'); return; }
+        if (!courseLocationReady) {
+          Swal.fire({ icon:'warning', title:'ยังไม่ได้ตั้งจุดฝึก', html:'หลักสูตรนี้ยังไม่ได้ตั้งพิกัดจุดฝึก<br>กรุณาแจ้งแอดมินให้ตั้งพิกัดก่อน จึงจะลงทะเบียนได้' });
+          return;
+        }
 
-      const lat = parseFloat(latInput);
-      const lng = parseFloat(lngInput);
-      const dist = calculateDistance(lat, lng, TARGET_LAT, TARGET_LNG);
-      if (dist > MAX_DIST) {
-        Swal.fire('ไม่สามารถบันทึกได้', `ห่างจากสถานที่ ${dist.toFixed(0)} เมตร (เกิน ${MAX_DIST} เมตร)`, 'error'); return;
-      }
+        const lockedMsgEl = document.getElementById('lockedMsg');
+        if (lockedMsgEl.style.display !== 'block' && !isNameValid(name)) {
+          Swal.fire('ไม่พบชื่อนี้', 'กรุณาเลือกชื่อจากรายการที่ขึ้นให้ หรือติดต่อแอดมินให้เพิ่มชื่อของคุณก่อนลงทะเบียน', 'error');
+          return;
+        }
 
-      Swal.fire({ title:'⏳ กำลังบันทึก...', allowOutsideClick:false, didOpen:()=>Swal.showLoading() });
-      try {
-        const saveResult = await callApi('saveData', {
-          type: timeType, name: name, courseType: courseType,
-          latitude: lat, longitude: lng, lineUserId: lineUserId, displayName: lineDisplayName
-        });
-        // เซิร์ฟเวอร์เป็นผู้ตัดสินใจประเภทที่แท้จริงที่บันทึกไป ใช้ค่านั้นแสดงผลเสมอ (กันกรณีค่าฝั่งเว็บคลาดเคลื่อน)
-        const savedType = (saveResult && saveResult.type) || timeType;
-        Swal.fire('สำเร็จ ✅', `บันทึก "${savedType}" เรียบร้อยแล้ว`, 'success').then(() => {
-          document.getElementById('yourLocation').textContent = 'ยังไม่ได้ตรวจสอบ';
-          document.getElementById('yourLocation').classList.add('empty');
-          document.getElementById('distance').textContent = 'ยังไม่ได้ตรวจสอบ';
-          document.getElementById('distance').classList.add('empty');
-          document.getElementById('distance').style.color = '';
-          document.getElementById('latitude').value = '';
-          document.getElementById('longitude').value = '';
-          const lockedMsg = document.getElementById('lockedMsg');
-          if (lockedMsg.style.display !== 'block') {
-            document.getElementById('courseType').value = '';
-            document.getElementById('name').value = '';
-            document.getElementById('name').disabled = true;
-          } else {
-            // ถูกล็อกชื่อ → ตรวจสถานะช่วงถัดไปให้เลย
-            if (courseType) checkTimeType(name, courseType);
-          }
-          resetTimeTypeBox();
-        });
-      } catch (err) {
-        Swal.fire('ผิดพลาด', err.message, 'error');
+        // สำคัญ: ตรวจสอบสถานะสดใหม่ทุกครั้งก่อนบันทึกจริง ห้ามใช้ค่าที่ค้างอยู่ในช่อง timeType
+        // (ค่าที่ค้างอาจไม่ตรงกับความจริง หากมีการตรวจสอบซ้อนกันหลายครั้งก่อนหน้า)
+        let timeType;
+        try {
+          timeType = await callApi('checkAttendanceType', { name, course: courseType });
+          document.getElementById('timeType').value = timeType;
+        } catch (err) {
+          Swal.fire('ผิดพลาด', 'ตรวจสอบสถานะไม่สำเร็จ กรุณาลองใหม่', 'error'); return;
+        }
+
+        if (timeType === 'ลงทะเบียนครบแล้ว') {
+          Swal.fire('ไม่สามารถบันทึกได้', 'คุณลงทะเบียนครบทั้ง 4 ช่วงแล้ววันนี้', 'warning'); return;
+        }
+        if (!latInput || !lngInput) { Swal.fire('ผิดพลาด', 'กรุณาตรวจสอบตำแหน่งก่อนบันทึก', 'error'); return; }
+
+        const lat = parseFloat(latInput);
+        const lng = parseFloat(lngInput);
+        const dist = calculateDistance(lat, lng, TARGET_LAT, TARGET_LNG);
+        if (dist > MAX_DIST) {
+          Swal.fire('ไม่สามารถบันทึกได้', `ห่างจากสถานที่ ${dist.toFixed(0)} เมตร (เกิน ${MAX_DIST} เมตร)`, 'error'); return;
+        }
+
+        Swal.fire({ title:'⏳ กำลังบันทึก...', allowOutsideClick:false, didOpen:()=>Swal.showLoading() });
+        try {
+          const saveResult = await callApi('saveData', {
+            type: timeType, name: name, courseType: courseType,
+            latitude: lat, longitude: lng, lineUserId: lineUserId, displayName: lineDisplayName
+          });
+          // เซิร์ฟเวอร์เป็นผู้ตัดสินใจประเภทที่แท้จริงที่บันทึกไป ใช้ค่านั้นแสดงผลเสมอ (กันกรณีค่าฝั่งเว็บคลาดเคลื่อน)
+          const savedType = (saveResult && saveResult.type) || timeType;
+          Swal.fire('สำเร็จ ✅', `บันทึก "${savedType}" เรียบร้อยแล้ว`, 'success').then(() => {
+            document.getElementById('yourLocation').textContent = 'ยังไม่ได้ตรวจสอบ';
+            document.getElementById('yourLocation').classList.add('empty');
+            document.getElementById('distance').textContent = 'ยังไม่ได้ตรวจสอบ';
+            document.getElementById('distance').classList.add('empty');
+            document.getElementById('distance').style.color = '';
+            document.getElementById('latitude').value = '';
+            document.getElementById('longitude').value = '';
+            const lockedMsg = document.getElementById('lockedMsg');
+            if (lockedMsg.style.display !== 'block') {
+              document.getElementById('courseType').value = '';
+              document.getElementById('name').value = '';
+              document.getElementById('name').disabled = true;
+            } else {
+              // ถูกล็อกชื่อ → ตรวจสถานะช่วงถัดไปให้เลย
+              if (courseType) checkTimeType(name, courseType);
+            }
+            resetTimeTypeBox();
+          });
+        } catch (err) {
+          Swal.fire('ผิดพลาด', err.message, 'error');
+        }
+      } finally {
+        // ปลดล็อกปุ่มเสมอไม่ว่าจะสำเร็จหรือ error กันปุ่มค้างกดไม่ได้ถาวร
+        isSaving = false;
+        saveBtn.disabled = false;
       }
     });
 
