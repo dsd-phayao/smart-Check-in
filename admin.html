@@ -92,14 +92,6 @@
     </div>
 
     <div class="body">
-      <!-- ★ ลิงก์ไปหน้าสรุปผลการฝึกอบรม (Report.html) เปิดแท็บใหม่
-           ถ้าเลือกหลักสูตรไว้อยู่แล้ว จะพาไปหน้าสรุปของหลักสูตรนั้นให้อัตโนมัติ -->
-      <a id="reportLink" href="Report.html" target="_blank"
-         class="btn-open-loc"
-         style="display:block;text-align:center;text-decoration:none;color:#7c3aed;background:#f5f3ff;border-color:#c4b5fd;margin-bottom:12px">
-        📊 สรุปผลการฝึกอบรม (พิมพ์ได้)
-      </a>
-
       <!-- ปุ่มเปิดกล่องเพิ่มหลักสูตรใหม่ -->
       <button type="button" class="btn-open-loc" onclick="toggleAddCourseBox(true)" style="margin-bottom:12px">➕ เพิ่มหลักสูตรใหม่</button>
 
@@ -151,7 +143,7 @@
       <!-- ★ ปุ่มเปิดกล่องแก้ไขข้อมูลหลักสูตร (วันที่ฝึก/ชม.รวม) — ใช้หลักสูตรจากช่อง "เลือกหลักสูตร" ด้านบน -->
       <button type="button" class="btn-open-loc" onclick="toggleCourseInfoBox(true)"
               style="color:#b45309;background:#fff7ed;border-color:#fdba74;margin-bottom:12px">
-        🗓️ แก้ไขข้อมูลหลักสูตร (วันที่/ชม.รวม)
+        🗓️ เพิ่มระยะเวลาการฝึกอบรม (วันที่/ชั่วโมงรวม)
       </button>
 
       <!-- ★ กล่องแก้ไขข้อมูลหลักสูตร (ซ่อนไว้ตอนแรก) -->
@@ -219,7 +211,7 @@
       <div class="divider"></div>
 
       <!-- ปุ่มเปิดกล่องพิมพ์หลักฐานการลงทะเบียน -->
-      <button type="button" class="btn-open-loc" onclick="toggleProofBox(true)" style="color:#7c3aed;background:#f5f3ff;border-color:#c4b5fd">🖨️ พิมพ์หลักฐานการลงทะเบียน</button>
+      <button type="button" class="btn-open-loc" onclick="toggleProofBox(true)" style="color:#7c3aed;background:#f5f3ff;border-color:#c4b5fd">🖨️ พิมพ์หลักฐานเวลาการลงทะเบียน</button>
 
       <div id="proofBox" style="display:none;margin-top:12px;padding:16px;border:1.5px solid #c4b5fd;border-radius:10px;background:#f5f3ff">
         <div style="font-weight:700;color:#7c3aed;margin-bottom:10px">ค้นหาหลักฐานการลงทะเบียน</div>
@@ -257,6 +249,14 @@
           </div>
         </div>
       </div>
+
+      <!-- ★ ลิงก์ไปหน้าสรุปผลการฝึกอบรม (Report.html) เปิดแท็บใหม่ — ย้ายมาไว้ใต้ปุ่มพิมพ์หลักฐานเวลาการลงทะเบียน
+           ถ้าเลือกหลักสูตรไว้อยู่แล้ว จะพาไปหน้าสรุปของหลักสูตรนั้นให้อัตโนมัติ -->
+      <a id="reportLink" href="Report.html" target="_blank"
+         class="btn-open-loc"
+         style="display:block;text-align:center;text-decoration:none;color:#7c3aed;background:#f5f3ff;border-color:#c4b5fd;margin-top:12px">
+        📊 สรุปผลการฝึกอบรม
+      </a>
 
       <div class="divider"></div>
 
