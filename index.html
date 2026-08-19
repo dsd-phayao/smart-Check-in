@@ -257,10 +257,12 @@
     }
     initLiff();
 
+    // ★ ดึงเฉพาะหลักสูตรที่ยัง "active" (ไม่ผ่านวันสิ้นสุดฝึกมาเกิน 30 วัน) กันดรอปดาวน์ยาวเกินไป
+    // เมื่อมีหลักสูตรสะสมหลายรุ่น หลักสูตรที่ยังไม่ได้ตั้งวันที่ฝึกไว้จะยังคงแสดงอยู่เสมอ
     async function loadCourses() {
       const sel = document.getElementById('courseType');
       try {
-        const courses = await callApi('getCourses', {});
+        const courses = await callApi('getActiveCourses', {});
         sel.innerHTML = '<option value="" selected disabled>-- กรุณาเลือกหลักสูตรก่อน --</option>';
         (courses || []).forEach(c => {
           const opt = document.createElement('option');
