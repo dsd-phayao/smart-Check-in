@@ -105,7 +105,7 @@
   <div class="app-shell">
     <div class="app-header">
       <div class="header-logo">
-        <img src="https://lh3.googleusercontent.com/d/1SB5mHkHSjwSfpJgfm05MM4S0LHPPnMtH"
+        <img src="https://drive.google.com/thumbnail?id=1wgDg2pzrudJQNTUhY6LWLLbfGrBKqYp0&sz=w200"
              alt="โลโก้"
              onerror="this.style.display='none'; this.parentElement.style.fontSize='28px'; this.parentElement.textContent='🏛️';">
       </div>
@@ -281,10 +281,6 @@
       if (lockedMsg.style.display === 'block') {
         const lockedName = nameInput.value;
         if (courseType) {
-          // ★ สำคัญ: ต้องโหลดพิกัดจุดฝึกของหลักสูตรด้วย แม้ผู้ใช้จะถูกล็อกชื่อแล้วก็ตาม
-          // เดิมโค้ดนี้ return ออกไปก่อนโดยไม่เคยเรียก loadCourseLocation() เลย
-          // ทำให้ courseLocationReady ค้างเป็น false เสมอสำหรับผู้ใช้ที่เคยลงทะเบียนสำเร็จมาแล้ว
-          // (ชื่อถูกล็อก) ทั้งที่หลักสูตรตั้งพิกัดไว้แล้วจริง เกิด error "ยังไม่ได้ตั้งจุดฝึก" ผิดพลาด
           loadCourseLocation(courseType);
           if (lockedName) checkTimeType(lockedName, courseType);
         }
@@ -311,19 +307,16 @@
       }
     }
 
-    // ★ กันปัญหาผลลัพธ์เก่ามาถึงทีหลังแล้วทับผลลัพธ์ใหม่กว่า เช่นเดียวกับ timeTypeCheckSeq
-    // (ป้องกันกรณีผู้ใช้สลับหลักสูตรเร็วๆ แล้วคำขอของหลักสูตรเก่าตอบกลับช้ากว่าคำขอของหลักสูตรใหม่)
     let courseLocationCheckSeq = 0;
     async function loadCourseLocation(courseType) {
       const mySeq = ++courseLocationCheckSeq;
       try {
         const loc = await callApi('getCourseLocation', { course: courseType });
-        if (mySeq !== courseLocationCheckSeq) return;   // มีการเลือกหลักสูตรใหม่กว่าไปแล้ว ทิ้งผลลัพธ์เก่านี้
+        if (mySeq !== courseLocationCheckSeq) return;
         if (loc && loc.lat && loc.lng) {
           TARGET_LAT = loc.lat; TARGET_LNG = loc.lng; MAX_DIST = loc.radius || 93;
           courseLocationReady = true;
         } else {
-          // หลักสูตรนี้ยังไม่ได้ตั้งพิกัดจุดฝึก ห้ามใช้พิกัดของหลักสูตรอื่นหรือค่าเริ่มต้นใดๆ ทั้งสิ้น
           TARGET_LAT = null; TARGET_LNG = null;
           courseLocationReady = false;
         }
@@ -336,14 +329,13 @@
     }
 
     let allNames = [];
-    const NAME_MIN_CHARS = 9;   // ต้องพิมพ์อย่างน้อยกี่ตัวอักษรก่อนจะแสดงรายชื่อ (กันไม่ให้เห็นชื่อคนอื่นทั้งหมดตั้งแต่แตะช่อง)
+    const NAME_MIN_CHARS = 9;
 
     function fillNameList(names) {
       allNames = names || [];
       renderNameDropdown('');
     }
 
-    // แสดงรายชื่อในกล่องดรอปดาวน์ที่กำหนดเอง (แทนที่ datalist ของเบราว์เซอร์ ซึ่งแสดงผลไม่แน่นอนบนมือถือ)
     function renderNameDropdown(keyword) {
       const listEl = document.getElementById('nameDropdownList');
       const kw = String(keyword || '').trim();
@@ -363,7 +355,6 @@
         const item = document.createElement('div');
         item.className = 'combo-item';
         item.textContent = n;
-        // ใช้ mousedown/touchstart แทน click เพื่อให้ทำงานก่อน blur ของ input
         item.addEventListener('mousedown', function (e) { e.preventDefault(); selectName(n); });
         listEl.appendChild(item);
       });
@@ -371,7 +362,7 @@
 
     function selectName(name) {
       const nameInput = document.getElementById('name');
-      nameInput.value = name;   // ค่าที่ตรงกับรายชื่อในหลักสูตร 100% เพราะเลือกจากลิสต์โดยตรง
+      nameInput.value = name;
       closeNameDropdown();
       triggerTimeCheck();
     }
@@ -384,7 +375,6 @@
       if (wrap && !wrap.contains(e.target)) closeNameDropdown();
     });
 
-    // ต้องเป็นชื่อที่แอดมินเพิ่มไว้ในหลักสูตรนี้เท่านั้น (ตรงเป๊ะ ไม่ใช่แค่คล้ายกัน) ผู้เข้าฝึกเพิ่มชื่อเองไม่ได้
     function isNameValid(name) {
       return allNames.indexOf(String(name || '').trim()) !== -1;
     }
@@ -396,8 +386,7 @@
       document.getElementById('timeType').value = '';
     }
 
-    /* ตรวจสถานะ 4 ช่วง: เข้าฝึก / พักเที่ยง / เข้าบ่าย / เลิกฝึก */
-    let timeTypeCheckSeq = 0;   // กันปัญหาผลลัพธ์เก่ามาถึงทีหลังแล้วทับผลลัพธ์ใหม่กว่า (คำขอที่ยิงทีหลังต้องชนะเสมอ)
+    let timeTypeCheckSeq = 0;
     async function checkTimeType(name, course) {
       const mySeq = ++timeTypeCheckSeq;
       const box = document.getElementById('timeTypeDisplay');
@@ -408,7 +397,7 @@
 
       try {
         const type = await callApi('checkAttendanceType', { name, course });
-        if (mySeq !== timeTypeCheckSeq) return;   // มีการตรวจสอบใหม่กว่าเริ่มไปแล้ว ทิ้งผลลัพธ์เก่านี้
+        if (mySeq !== timeTypeCheckSeq) return;
         hidden.value = type;
         box.classList.remove('morning', 'lunch', 'afternoon', 'evening', 'full');
 
@@ -439,7 +428,7 @@
       const name = document.getElementById('name').value.trim();
       const course = document.getElementById('courseType').value;
       if (!name || !course) return;
-      if (!isNameValid(name)) { resetTimeTypeBox(); return; }   // ยังไม่ใช่ชื่อที่ถูกต้อง ไม่ต้องเช็คสถานะ
+      if (!isNameValid(name)) { resetTimeTypeBox(); return; }
       checkTimeType(name, course);
     }
     const nameEl = document.getElementById('name');
@@ -453,7 +442,7 @@
       nameCheckTimer = setTimeout(triggerTimeCheck, 600);
     });
     nameEl.addEventListener('blur', function () {
-      setTimeout(closeNameDropdown, 150);   // หน่วงเวลาให้คลิกเลือกรายชื่อในลิสต์ทำงานก่อน blur
+      setTimeout(closeNameDropdown, 150);
       triggerTimeCheck();
     });
 
@@ -522,8 +511,6 @@
     document.getElementById('locationForm').addEventListener('submit', async function (e) {
       e.preventDefault();
 
-      // ★★★ กันกดปุ่มบันทึกซ้ำ/ส่งข้อมูลซ้ำระหว่างกำลังบันทึกอยู่ (double submit guard) ★★★
-      // ถ้ากำลังอยู่ระหว่างบันทึกครั้งก่อนหน้ายังไม่เสร็จ ไม่ต้องทำอะไรซ้ำอีก
       if (isSaving) return;
       isSaving = true;
       const saveBtn = document.getElementById('saveBtn');
@@ -551,8 +538,6 @@
           return;
         }
 
-        // สำคัญ: ตรวจสอบสถานะสดใหม่ทุกครั้งก่อนบันทึกจริง ห้ามใช้ค่าที่ค้างอยู่ในช่อง timeType
-        // (ค่าที่ค้างอาจไม่ตรงกับความจริง หากมีการตรวจสอบซ้อนกันหลายครั้งก่อนหน้า)
         let timeType;
         try {
           timeType = await callApi('checkAttendanceType', { name, course: courseType });
@@ -579,7 +564,6 @@
             type: timeType, name: name, courseType: courseType,
             latitude: lat, longitude: lng, lineUserId: lineUserId, displayName: lineDisplayName
           });
-          // เซิร์ฟเวอร์เป็นผู้ตัดสินใจประเภทที่แท้จริงที่บันทึกไป ใช้ค่านั้นแสดงผลเสมอ (กันกรณีค่าฝั่งเว็บคลาดเคลื่อน)
           const savedType = (saveResult && saveResult.type) || timeType;
           Swal.fire('สำเร็จ ✅', `บันทึก "${savedType}" เรียบร้อยแล้ว`, 'success').then(() => {
             document.getElementById('yourLocation').textContent = 'ยังไม่ได้ตรวจสอบ';
@@ -595,7 +579,6 @@
               document.getElementById('name').value = '';
               document.getElementById('name').disabled = true;
             } else {
-              // ถูกล็อกชื่อ → ตรวจสถานะช่วงถัดไปให้เลย
               if (courseType) checkTimeType(name, courseType);
             }
             resetTimeTypeBox();
@@ -604,7 +587,6 @@
           Swal.fire('ผิดพลาด', err.message, 'error');
         }
       } finally {
-        // ปลดล็อกปุ่มเสมอไม่ว่าจะสำเร็จหรือ error กันปุ่มค้างกดไม่ได้ถาวร
         isSaving = false;
         saveBtn.disabled = false;
       }
